@@ -36,7 +36,7 @@ def verify_cloudflare_edge():
     )
 
     assert event["country"] == "IN", "Country parsing failed"
-    assert event["bot_signal"] == "HUMAN_TRAFFIC", "Bot classification failed"
+    assert event["bot_signal"] == "LIKELY_HUMAN", "Bot classification failed"
     assert event["tls_version"] == "TLSv1.3", "TLS version check failed"
     assert "masked_ray_id" in event, "Masked Ray ID missing"
     print("[PASS] Cloudflare Edge Header Normalization & Ray ID Tracing Verified.")
@@ -49,7 +49,7 @@ def verify_cloudflare_edge():
         bot_score=10,
         rate_limit_action="ALLOW"
     )
-    assert bot_event["bot_signal"] == "AUTOMATED_BOT_SUSPECTED", "Bot threshold check failed"
+    assert bot_event["bot_signal"] == "LIKELY_AUTOMATED", "Bot threshold check failed"
     print("[PASS] Cloudflare Bot Management & Score Classification Verified.")
 
     # 3. Status probe

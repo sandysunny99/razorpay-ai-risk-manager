@@ -32,8 +32,15 @@ class CloudflareAdapter:
         country = hdrs.get("cf-ipcountry") or hdrs.get("CF-IPCountry") or "IN"
         connecting_ip = hdrs.get("cf-connecting-ip") or hdrs.get("CF-Connecting-IP") or "122.166.45.10"
         
-        # Determine bot classification based on Cloudflare Bot Score
-        bot_signal = "HUMAN_TRAFFIC" if bot_score >= 30 else "AUTOMATED_BOT_SUSPECTED"
+        # Determine bot classification based on Cloudflare Bot Score (1-99)
+        if bot_score == 1:
+            bot_signal = "VERIFIED_BOT"
+        elif 2 <= bot_score < 30:
+            bot_signal = "LIKELY_AUTOMATED"
+        elif 30 <= bot_score <= 99:
+            bot_signal = "LIKELY_HUMAN"
+        else:
+            bot_signal = "UNKNOWN"
 
         event = {
             "event_id": f"CF-EVT-{uuid.uuid4().hex[:8].upper()}",

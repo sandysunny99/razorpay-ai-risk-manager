@@ -110,7 +110,7 @@ def test_cloudflare_adapter_normalization():
         rate_limit_action="ALLOW"
     )
     assert event["country"] == "US"
-    assert event["bot_signal"] == "AUTOMATED_BOT_SUSPECTED"
+    assert event["bot_signal"] == "LIKELY_AUTOMATED"
     assert event["tls_version"] == "TLSv1.3"
     assert "masked_ray_id" in event
 

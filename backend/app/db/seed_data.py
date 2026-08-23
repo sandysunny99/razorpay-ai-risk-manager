@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from app.models.entities import Customer, Card, PaymentToken, Transaction, ThreatSource, ExposureEvent, SecurityCase, AuditEvent
+from app.models.entities import (
+    Customer, Card, PaymentToken, Transaction, ThreatSource,
+    ExposureEvent, SecurityCase, AuditEvent, CloudflareSecurityEvent
+)
 from app.threat_intel.synthetic_provider import (
     DEMO_FP_4921, VICTIM_FP_8820, LOW_CONF_FP_1099, CLEAN_FP_1234
 )
@@ -152,4 +155,60 @@ def seed_initial_data(db: Session):
         velocity_10m=1
     )
     db.add_all([txn_golden, txn_normal])
+    db.commit()
+
+    # 5. Threat Intelligence Exposure Events
+    exp1 = ExposureEvent(
+        card_fingerprint=DEMO_FP_4921,
+        bin="411111",
+        source_name="RedLine_Stealer_DarkWeb_Forum",
+        exposure_type="stealer_log",
+        confidence_score=0.96,
+        leak_date=datetime.utcnow() - timedelta(days=2),
+        raw_metadata={"bot_net": "RedLine_v24", "origin_country": "RU"}
+    )
+    exp2 = ExposureEvent(
+        card_fingerprint=VICTIM_FP_8820,
+        bin="520082",
+        source_name="Pastebin_Breach_Leak",
+        exposure_type="paste_leak",
+        confidence_score=0.74,
+        leak_date=datetime.utcnow() - timedelta(days=7),
+        raw_metadata={"paste_id": "paste_8820_dump"}
+    )
+    db.add_all([exp1, exp2])
+    db.commit()
+
+    # 6. Cloudflare Security Telemetry Events
+    cf1 = CloudflareSecurityEvent(
+        event_id="CF-EVT-9042A",
+        ray_id="8c41f0a12e9b-BOM",
+        masked_ray_id="8c41...2e9b",
+        tenant_id="DemoStore",
+        event_type="WAF_INSPECT",
+        origin_ip="195.201.12.88",
+        country="RU",
+        waf_action="ALLOW",
+        bot_score=15,
+        bot_signal="LIKELY_AUTOMATED",
+        rate_limit_signal="ALLOW",
+        tls_version="TLSv1.3",
+        edge_status="NORMAL"
+    )
+    cf2 = CloudflareSecurityEvent(
+        event_id="CF-EVT-1001B",
+        ray_id="8c41f0a12e9c-DEL",
+        masked_ray_id="8c41...2e9c",
+        tenant_id="DemoStore",
+        event_type="WAF_INSPECT",
+        origin_ip="122.166.45.10",
+        country="IN",
+        waf_action="ALLOW",
+        bot_score=92,
+        bot_signal="LIKELY_HUMAN",
+        rate_limit_signal="ALLOW",
+        tls_version="TLSv1.3",
+        edge_status="NORMAL"
+    )
+    db.add_all([cf1, cf2])
     db.commit()
