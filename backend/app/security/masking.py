@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 
 def mask_pan(pan: str) -> str:
     """
-    Masks a credit card PAN to PCI-DSS compliant format: **** **** **** 4921
+    Masks a credit card PAN to PCI-aware format: **** **** **** 4921
     Works with space-separated, hyphen-separated, or contiguous digits.
     """
     if not pan:

@@ -17,7 +17,7 @@
 | **`backend/app/security/dlp.py`** | **REAL** | Multi-pattern regex + Luhn checksum validator + Secret detector (JWT, API keys, DB URIs). | Real-time redaction across inputs, outputs, logs, and agent prompts. | **VERIFIED** |
 | **`backend/app/integrations/cloudflare_adapter.py`** | **REAL / ADAPTER** | Ingests WAF actions, Bot scores (1-99 taxonomy: `LIKELY_AUTOMATED`, `LIKELY_HUMAN`, `VERIFIED_BOT`), Rate limits. | Strips cookies and authorization headers before storing telemetry. | **VERIFIED** |
 | **`backend/app/api/routes_security.py`** | **REAL** | REST endpoints for edge telemetry, 4-pillar data protection status, and live DLP sandbox. | Strict Pydantic output schemas with no secret leakage. | **VERIFIED** |
-| **`backend/app/api/routes_exposure.py`** | **REAL** | Zero-knowledge HMAC-SHA256 CTI breach search and statistics across stealer dumps. | Zero raw PAN accepted; expects HMAC fingerprint. | **VERIFIED** |
+| **`backend/app/api/routes_exposure.py`** | **REAL** | HMAC-SHA-256 PAN fingerprinting CTI breach search and statistics across stealer dumps. | Zero raw PAN accepted; expects HMAC fingerprint. | **VERIFIED** |
 | **`frontend/src/components/SecurityCenter.tsx`** | **REAL** | Multi-tab UI for Cloudflare edge telemetry, Data Protection matrix, and interactive DLP sandbox. | Built with TypeScript & Tailwind; no hardcoded false credentials. | **VERIFIED** |
 | **`frontend/src/components/CardExposureOverview.tsx`** | **REAL** | Monitored vs Exposed card analytics and breach event timeline table. | Masked identifiers only (`**** 4921`, HMAC prefix). | **VERIFIED** |
 

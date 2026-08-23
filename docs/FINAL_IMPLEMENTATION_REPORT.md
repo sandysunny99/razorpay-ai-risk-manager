@@ -18,7 +18,7 @@
 | **Data Protection & Encryption**| **NEW / ACTIVE** | AES-256-GCM authenticated field encryption with versioned KMS KeyProvider. |
 | **Data Loss Prevention (DLP)**| **NEW / ACTIVE** | Multi-pattern regex & Luhn algorithm scrubber protecting API inputs, DB writes, agent traces, and logs. |
 | **Dynamic Masking Engine** | **NEW / ACTIVE** | Backend role-aware masking for PANs, emails, IPs, phone numbers, customer IDs, and tokens. |
-| **Card Exposure & CTI** | **EXTENDED** | Zero-knowledge HMAC-SHA256 breach matching, stealer log analysis, and paste leak correlation. |
+| **Card Exposure & CTI** | **EXTENDED** | HMAC-SHA-256 PAN fingerprinting breach matching, stealer log analysis, and paste leak correlation. |
 | **SOC Dashboard & UI** | **EXTENDED** | Added Security Center, Data Protection Matrix, Interactive DLP Sandbox, and CTI Exposure View. |
 | **Automated Testing Suite** | **54 / 54 PASSED** | Unit, IDOR, Step-Up, Policy, Audit, Metrics, DLP, Encryption, and Cloudflare tests. |
 | **Held-Out Test Set** | **FROZEN (100%)** | SHA-256: `76a26e7cef5038a228ba178dc7e1d8e170c4133dc528f28d1764e46609ba8a5f`. |

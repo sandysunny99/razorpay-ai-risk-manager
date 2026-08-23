@@ -56,5 +56,5 @@
 ## 2. Core Architectural Guarantees
 
 1. **Separation of Concerns**: Threat Intelligence and Cloudflare edge signals provide telemetry; the deterministic Risk Scorer calculates composite risk; the Policy Engine gates actions.
-2. **Zero-Knowledge Matching**: Card numbers are never stored in plaintext. HMAC-SHA-256 fingerprints enable zero-knowledge correlation against external breach dumps.
+2. **HMAC-SHA-256 PAN Fingerprinting**: Card numbers are never stored in plaintext. HMAC-SHA-256 fingerprints enable privacy-preserving correlation against external breach dumps.
 3. **Defense-in-Depth DLP**: Proactive regex and Luhn algorithm scanners operate across API inputs, database writes, agent reasoning traces, log pipelines, and frontend JSON responses.

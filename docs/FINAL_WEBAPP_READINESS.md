@@ -14,7 +14,7 @@
 | **FastAPI Security Gateway** | Python 3.12, Uvicorn, Pydantic v2 | **READY** | All 10 router modules active; zero unhandled exceptions. |
 | **React SOC Dashboard** | React 18, TypeScript, TailwindCSS, Vite | **READY** | 1,816 modules transformed in $1.39\text{s}$ ($0$ TypeScript errors). |
 | **Security Center & DLP Tab** | Real-time edge telemetry + Interactive DLP sandbox | **READY** | Tested against synthetic Luhn card inputs. |
-| **Threat Intel Exposure Tab** | Zero-knowledge breach search + Event timeline | **READY** | HMAC-SHA-256 fingerprint correlation verified. |
+| **Threat Intel Exposure Tab** | HMAC-SHA-256 breach search + Event timeline | **READY** | HMAC-SHA-256 fingerprint correlation verified. |
 | **Investigation Timeline** | 4 Dynamic Investigation Levels (0-3) + Tool Audit | **READY** | Calibrated evidence grounding with `[EVID-...]` tags. |
 | **Evaluation Dashboard** | Dual confusion matrices ($T=40$ & $T=75$) + Tiers | **READY** | Side-by-side operating curves and error diagnostics. |
 | **Production Container** | Multi-stage Docker build (`node:20` + `python:3.12`) | **READY** | `Dockerfile` and `docker-compose.yml` configured. |

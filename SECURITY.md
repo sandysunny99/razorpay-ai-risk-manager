@@ -1,8 +1,8 @@
 # Razorpay Risk Manager Agent: Security Architecture & Controls
 
-## 1. Zero-Knowledge Card Fingerprinting
+## 1. HMAC-SHA-256 Card Fingerprinting
 
-In traditional payment systems, matching credit cards against compromised data dumps creates severe compliance and data-leak risks. The Razorpay Risk Manager Agent solves this with **HMAC-SHA256 Card Fingerprinting**:
+In traditional payment systems, matching credit cards against compromised data dumps creates severe compliance and data-leak risks. The Razorpay Risk Manager Agent solves this with **HMAC-SHA-256 Card Fingerprinting**:
 
 ```
 RAW PAN (4111 1111 1111 4921)
@@ -14,7 +14,7 @@ RAW PAN (4111 1111 1111 4921)
    [HMAC-SHA256 + Secret Salt] ───► e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
                                                       │
                                                       ▼
-                                       [Zero-Knowledge Threat Match]
+                                       [Privacy-Preserving Threat Match]
 ```
 
 ### Security Guarantees:

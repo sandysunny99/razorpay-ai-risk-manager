@@ -48,7 +48,7 @@ export const DemoScenarioTrigger: React.FC<DemoScenarioTriggerProps> = ({
             </h2>
           </div>
           <p className="text-sm text-slate-300 max-w-2xl">
-            Simulate live payment attacks, zero-knowledge threat correlation, policy evaluation, and verified token remediation.
+            Simulate live payment attacks, HMAC-SHA-256 threat correlation, policy evaluation, and verified token remediation.
           </p>
         </div>
 

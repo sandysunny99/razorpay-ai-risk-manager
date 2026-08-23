@@ -52,7 +52,7 @@ export const CardRiskTable: React.FC<CardRiskTableProps> = ({
           </h3>
         </div>
         <span className="text-xs text-slate-400">
-          Zero-Knowledge HMAC Fingerprinted • PCI-DSS Compliant
+          HMAC-SHA-256 Fingerprinted • PCI-Aware Prototype
         </span>
       </div>
 

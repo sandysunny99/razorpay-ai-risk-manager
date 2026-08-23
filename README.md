@@ -158,6 +158,10 @@ In the SOC Dashboard (`http://localhost:5173`), click **"Scenario 1: Stealer Dum
 
 ## 📚 Technical Documentation Index
 
+- [docs/FINAL_RELEASE_V2.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_V2.md) - Final Release Specification (v2.0.0-rc1)
+- [docs/FINAL_INTEGRATION_BASELINE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_INTEGRATION_BASELINE.md) - Final Integration Baseline Lock
+- [docs/DEPLOYMENT_EVIDENCE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DEPLOYMENT_EVIDENCE.md) - Deployment Evidence & Verification Record
+- [docs/LIVE_SECURITY_EVIDENCE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/LIVE_SECURITY_EVIDENCE.md) - Live Security Evidence & Control Evaluation Record
 - [docs/FINAL_RELEASE_CANDIDATE_REPORT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_CANDIDATE_REPORT.md) - Final Release Candidate Engineering Report
 - [docs/FINAL_IMPLEMENTATION_REPORT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_IMPLEMENTATION_REPORT.md) - Final Implementation & Security Engineering Report
 - [docs/SECURITY_EVIDENCE_MATRIX.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/SECURITY_EVIDENCE_MATRIX.md) - Security Evidence & Control Verification Matrix
@@ -166,7 +170,7 @@ In the SOC Dashboard (`http://localhost:5173`), click **"Scenario 1: Stealer Dum
 - [docs/NEXT_PHASE_BASELINE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/NEXT_PHASE_BASELINE.md) - Next Phase Baseline & Current-State Verification
 - [docs/FINAL_SYSTEM_ARCHITECTURE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_SYSTEM_ARCHITECTURE.md) - Final System Architecture & Defense-in-Depth Specification
 - [docs/CLOUDFLARE_SECURITY_ARCHITECTURE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CLOUDFLARE_SECURITY_ARCHITECTURE.md) - Cloudflare Security Perimeter & Edge Architecture
-- [docs/CARD_EXPOSURE_ARCHITECTURE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CARD_EXPOSURE_ARCHITECTURE.md) - Card Exposure Architecture & Zero-Knowledge Correlation
+- [docs/CARD_EXPOSURE_ARCHITECTURE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CARD_EXPOSURE_ARCHITECTURE.md) - Card Exposure Architecture & HMAC Threat Correlation
 - [docs/CRYPTOGRAPHIC_DATA_PROTECTION.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CRYPTOGRAPHIC_DATA_PROTECTION.md) - Cryptographic Data Protection & Key Management
 - [docs/DATA_CLASSIFICATION.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DATA_CLASSIFICATION.md) - Data Classification Policy & Sensitivity Taxonomy
 - [docs/DATA_FLOW_SECURITY_MAP.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DATA_FLOW_SECURITY_MAP.md) - End-to-End Data Flow Security Map

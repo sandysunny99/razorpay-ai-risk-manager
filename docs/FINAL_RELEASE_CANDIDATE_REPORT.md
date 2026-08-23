@@ -23,7 +23,7 @@
 | **Data Loss Prevention (DLP)** | **Luhn Scrubber + Secret Scanner** | Proactive regex and Luhn validation across inputs, DB, agent, and logs. |
 | **Dynamic Masking Engine** | **Role-Aware Server-Side Masking** | PANs, emails, IPs, phone numbers, customer IDs, and tokens masked. |
 | **Cloudflare Security Perimeter** | **Normalized Edge Telemetry** | Ingests WAF actions, Bot scores (1-99 taxonomy), and Ray ID correlation. |
-| **Threat Intelligence & Exposure** | **Zero-Knowledge HMAC Matching** | Stealer dump and paste leak matching with zero raw PAN exposure. |
+| **Threat Intelligence & Exposure** | **HMAC-SHA-256 PAN Fingerprinting** | Stealer dump and paste leak matching with zero raw PAN exposure. |
 | **Frontend SOC Dashboard** | **1,816 Modules ($0$ Errors)** | React 18 + Vite + Tailwind with Security Center and CTI views. |
 | **Pre-Deployment Quality Gates** | **100% PASS (`pre_deploy.py`)** | All 7 release criteria automated and validated. |
 

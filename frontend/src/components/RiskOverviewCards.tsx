@@ -14,7 +14,7 @@ export const RiskOverviewCards: React.FC<RiskOverviewCardsProps> = ({ metrics })
       icon: CreditCard,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10 border-blue-500/20',
-      subtitle: 'HMAC Zero-Knowledge Protected',
+      subtitle: 'HMAC-SHA-256 Protected',
     },
     {
       title: 'Tokens Monitored',

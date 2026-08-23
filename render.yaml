@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: razorpay-risk-manager
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: standard
+    region: singapore
+    healthCheckPath: /health
+    envVars:
+      - key: APP_MODE
+        value: demo
+      - key: DRY_RUN
+        value: "true"
+      - key: HMAC_SECRET_KEY
+        generateValue: true
+      - key: MASTER_ENCRYPTION_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///./risk_management.db

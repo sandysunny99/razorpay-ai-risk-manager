@@ -1,4 +1,4 @@
-# Card Exposure Architecture & Zero-Knowledge Correlation
+# Card Exposure Architecture & HMAC-SHA-256 Threat Correlation
 
 **Project**: Razorpay AI Risk Manager Agent  
 **Hackathon**: Razorpay AI Buildathon 2026 (Track: AI Risk Manager)  
@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Zero-Knowledge Card Matching Design
+## 1. HMAC-SHA-256 Card Fingerprinting & Privacy-Preserving Matching
 
 Raw 16-digit PANs are never ingested, stored, matched, or transmitted across the risk management lifecycle.
 

@@ -37,7 +37,7 @@ export function CardExposureOverview() {
             <h2 className="text-xl font-bold text-white tracking-wide">Threat Intelligence & Card Exposure Overview</h2>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Zero-Knowledge HMAC-SHA256 Matcher • Stealer Dumps • DarkWeb Breaches • Pastebin Feeds
+            HMAC-SHA-256 PAN Fingerprinting Matcher • Stealer Dumps • DarkWeb Breaches • Pastebin Feeds
           </p>
         </div>
         <button

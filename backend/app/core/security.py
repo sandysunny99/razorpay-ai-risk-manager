@@ -22,7 +22,7 @@ def luhn_checksum_valid(card_number: str) -> bool:
     return checksum % 10 == 0
 
 def mask_pan(pan: str) -> str:
-    """Mask a credit card PAN to PCI-DSS compliant format: **** **** **** 1234"""
+    """Mask a credit card PAN to PCI-aware format: **** **** **** 1234"""
     clean_pan = re.sub(r"\D", "", pan)
     if len(clean_pan) < 4:
         return "****"
