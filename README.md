@@ -158,6 +158,15 @@ In the SOC Dashboard (`http://localhost:5173`), click **"Scenario 1: Stealer Dum
 
 ## 📚 Technical Documentation Index
 
+- [docs/FINAL_IMPLEMENTATION_REPORT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_IMPLEMENTATION_REPORT.md) - Final Implementation & Security Engineering Report
+- [docs/FINAL_SYSTEM_ARCHITECTURE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_SYSTEM_ARCHITECTURE.md) - Final System Architecture & Defense-in-Depth Specification
+- [docs/CLOUDFLARE_SECURITY_ARCHITECTURE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CLOUDFLARE_SECURITY_ARCHITECTURE.md) - Cloudflare Security Perimeter & Edge Architecture
+- [docs/CARD_EXPOSURE_ARCHITECTURE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CARD_EXPOSURE_ARCHITECTURE.md) - Card Exposure Architecture & Zero-Knowledge Correlation
+- [docs/CRYPTOGRAPHIC_DATA_PROTECTION.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CRYPTOGRAPHIC_DATA_PROTECTION.md) - Cryptographic Data Protection & Key Management
+- [docs/DATA_CLASSIFICATION.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DATA_CLASSIFICATION.md) - Data Classification Policy & Sensitivity Taxonomy
+- [docs/DATA_FLOW_SECURITY_MAP.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DATA_FLOW_SECURITY_MAP.md) - End-to-End Data Flow Security Map
+- [docs/DATA_RETENTION_POLICY.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DATA_RETENTION_POLICY.md) - Data Retention Policy & Secure Lifecycle Management
+- [docs/POST_DEPLOYMENT_SMOKE_TEST.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/POST_DEPLOYMENT_SMOKE_TEST.md) - Post-Deployment Verification & Smoke Test Runbook
 - [docs/RELEASE_CANDIDATE_AUDIT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/RELEASE_CANDIDATE_AUDIT.md) - Release Candidate Audit & Final Submission Declaration
 - [docs/RELEASE_BASELINE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/RELEASE_BASELINE.md) - Release baseline execution & metric reproduction
 - [docs/PRE_RELEASE_AUDIT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/PRE_RELEASE_AUDIT.md) - Pre-release architecture & codebase audit report

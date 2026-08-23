@@ -161,4 +161,38 @@ export const api = {
     if (!res.ok) throw new Error('Failed to verify step-up challenge');
     return res.json();
   },
+
+  async getSecurityEvents(): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/security/cloudflare/events`);
+    if (!res.ok) throw new Error('Failed to fetch security events');
+    return res.json();
+  },
+
+  async getDataProtectionStatus(): Promise<any> {
+    const res = await fetch(`${API_BASE}/security/data-protection`);
+    if (!res.ok) throw new Error('Failed to fetch data protection status');
+    return res.json();
+  },
+
+  async testDLP(inputText: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/security/dlp/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input_text: inputText }),
+    });
+    if (!res.ok) throw new Error('DLP test request failed');
+    return res.json();
+  },
+
+  async getExposureEvents(): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/exposure/events`);
+    if (!res.ok) throw new Error('Failed to fetch exposure events');
+    return res.json();
+  },
+
+  async getExposureStatistics(): Promise<any> {
+    const res = await fetch(`${API_BASE}/exposure/statistics`);
+    if (!res.ok) throw new Error('Failed to fetch exposure statistics');
+    return res.json();
+  },
 };

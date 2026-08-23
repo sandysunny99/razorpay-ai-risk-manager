@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  risk-manager-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: razorpay-risk-manager-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_MODE=demo
+      - DRY_RUN=true
+      - HMAC_SECRET_KEY=razorpay_risk_agent_hmac_secret_key_2026_demo
+      - MASTER_ENCRYPTION_KEY=razorpay_risk_agent_master_aes256_gcm_secret_key_2026
+      - DATABASE_URL=sqlite:///./risk_management.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

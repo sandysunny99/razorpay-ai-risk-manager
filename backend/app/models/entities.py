@@ -151,3 +151,45 @@ class AuditEvent(Base):
     current_hash = Column(String(64), nullable=False, index=True)
     details = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class CloudflareSecurityEvent(Base):
+    __tablename__ = "cloudflare_security_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(String(64), unique=True, index=True, nullable=False)
+    ray_id = Column(String(64), index=True, nullable=False)
+    masked_ray_id = Column(String(32), nullable=False)
+    tenant_id = Column(String(64), default="DemoStore", index=True)
+    event_type = Column(String(64), default="WAF_INSPECT")  # WAF_BLOCK, BOT_CHALLENGE, RATE_LIMIT, WAF_INSPECT
+    origin_ip = Column(String(64), default="122.166.45.10")
+    country = Column(String(8), default="IN")
+    waf_action = Column(String(32), default="ALLOW")  # ALLOW, BLOCK, CHALLENGE, LOG
+    bot_score = Column(Integer, default=85)
+    bot_signal = Column(String(64), default="HUMAN_TRAFFIC")
+    rate_limit_signal = Column(String(32), default="ALLOW")
+    tls_version = Column(String(16), default="TLSv1.3")
+    edge_status = Column(String(32), default="NORMAL")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class DLPEvent(Base):
+    __tablename__ = "dlp_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(String(64), unique=True, index=True, nullable=False)
+    violation_type = Column(String(64), nullable=False)  # PAN_DETECTED, JWT_DETECTED, API_KEY_DETECTED
+    severity = Column(String(32), default="HIGH")  # HIGH, CRITICAL
+    action_taken = Column(String(32), default="MASKED")  # MASKED, BLOCKED, REDACTED
+    source_context = Column(String(128), default="API_INPUT")  # API_INPUT, AGENT_IO, LOG_PIPELINE
+    masked_sample = Column(String(128), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class KeyMetadata(Base):
+    __tablename__ = "key_metadata"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key_id = Column(String(64), unique=True, index=True, nullable=False)
+    version = Column(String(16), nullable=False)
+    algorithm = Column(String(32), default="AES-256-GCM")
+    status = Column(String(32), default="ACTIVE")  # ACTIVE, RETIRED, REVOKED
+    created_at = Column(DateTime, default=datetime.utcnow)
+

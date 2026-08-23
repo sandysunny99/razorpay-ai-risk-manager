@@ -9,6 +9,8 @@ import { SecurityCasesTable } from './components/SecurityCasesTable';
 import { AuditTrailTable } from './components/AuditTrailTable';
 import { EvaluationDashboard } from './components/EvaluationDashboard';
 import { LiveRiskTable } from './components/LiveRiskTable';
+import { SecurityCenter } from './components/SecurityCenter';
+import { CardExposureOverview } from './components/CardExposureOverview';
 
 import { api } from './services/api';
 import {
@@ -35,7 +37,7 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isAgentRunning, setIsAgentRunning] = useState<boolean>(false);
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'evaluation' | 'liverisk' | 'cards' | 'cases' | 'audit'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'evaluation' | 'liverisk' | 'cards' | 'cases' | 'audit' | 'security' | 'exposure'>('timeline');
 
   const fetchAllData = async () => {
     setIsLoading(true);
@@ -165,6 +167,26 @@ export function App() {
             Agent Investigation Timeline {investigation && '• Active'}
           </button>
           <button
+            onClick={() => setActiveTab('security')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
+              activeTab === 'security'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            SOC Security Center & DLP
+          </button>
+          <button
+            onClick={() => setActiveTab('exposure')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
+              activeTab === 'exposure'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            Threat Intelligence & Exposure
+          </button>
+          <button
             onClick={() => setActiveTab('evaluation')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === 'evaluation'
@@ -172,7 +194,7 @@ export function App() {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            Model Evaluation & Metrics (Held-Out Test Set)
+            Model Evaluation & Metrics
           </button>
           <button
             onClick={() => setActiveTab('liverisk')}
@@ -219,6 +241,14 @@ export function App() {
         {/* Tab Content Panes */}
         {activeTab === 'timeline' && (
           <InvestigationTimeline investigation={investigation} />
+        )}
+
+        {activeTab === 'security' && (
+          <SecurityCenter />
+        )}
+
+        {activeTab === 'exposure' && (
+          <CardExposureOverview />
         )}
 
         {activeTab === 'evaluation' && (
