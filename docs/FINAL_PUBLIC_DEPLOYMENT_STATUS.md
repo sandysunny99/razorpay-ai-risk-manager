@@ -13,7 +13,7 @@
 
 | Pipeline Component | Verified Runtime Status | Verification Evidence / Specification |
 | :--- | :--- | :--- |
-| **GitHub Repository** | **DEPLOYMENT_CONFIGURED** | `razorpay-ai-risk-manager` configured with [`.github/workflows/ci.yml`](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/.github/workflows/ci.yml) |
+| **GitHub Repository** | **LIVE / PUSHED** | [`sandysunny99/razorpay-ai-risk-manager`](https://github.com/sandysunny99/razorpay-ai-risk-manager) with [`.github/workflows/ci.yml`](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/.github/workflows/ci.yml) |
 | **Commit / Tag** | **`3b14370` / `v2.0.0-rc1`** | Clean working tree; release tag points to verified commit |
 | **GitHub CI Workflow** | **PASS** | Automated 8-stage pipeline: tests, evaluation, security, DLP, frontend, Docker |
 | **Render Cloud Deploy** | **DEPLOYMENT_CONFIGURED** | Multi-stage Docker service configured via [`render.yaml`](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/render.yaml) & [`Dockerfile`](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/Dockerfile) |
