@@ -10,7 +10,7 @@ jobs:
   validate-and-build:
     runs-on: ubuntu-latest
     env:
-      PYTHONPATH: .
+      PYTHONPATH: backend:.
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
