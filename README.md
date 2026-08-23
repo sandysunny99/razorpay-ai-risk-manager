@@ -198,6 +198,11 @@ python scripts/reset_demo.py
 
 ## 📚 12. Technical Documentation Index
 
+- [docs/FINAL_DEPLOYMENT_STATUS.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_DEPLOYMENT_STATUS.md) - Final Deployment & Submission Status Specification (v2.0.0-rc1)
+- [docs/GITHUB_DEPLOYMENT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/GITHUB_DEPLOYMENT.md) - GitHub Repository & CI Pipeline Specification
+- [docs/RENDER_DEPLOYMENT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/RENDER_DEPLOYMENT.md) - Render Cloud Deployment Specification
+- [docs/CLOUDFLARE_DEPLOYMENT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CLOUDFLARE_DEPLOYMENT.md) - Cloudflare Edge Perimeter Deployment Specification
+- [docs/LIVE_APPLICATION_TEST.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/LIVE_APPLICATION_TEST.md) - Live Application Smoke Test & Verification Record
 - [docs/FINAL_RELEASE_TRUTH_MATRIX.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_TRUTH_MATRIX.md) - Final Release Truth & Allowed Claims Matrix (v2.0.0-rc1)
 - [docs/FINAL_RELEASE_STATUS.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_STATUS.md) - Final Release Status Specification (v2.0.0-rc1)
 - [docs/FINAL_RELEASE_EVIDENCE_MATRIX.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_EVIDENCE_MATRIX.md) - Final Release Evidence Matrix (v2.0.0-rc1)

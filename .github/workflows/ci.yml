@@ -1,0 +1,60 @@
+name: CI Quality Gate & Security Pipeline
+
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest httpx
+
+      - name: 1. Test Set Hash Immutability Gate
+        run: python scripts/verify_test_set.py
+
+      - name: 2. Automated Backend Pytest Suite (54 Tests)
+        run: pytest -q
+
+      - name: 3. Reproducible Final Evaluation Benchmark
+        run: python scripts/run_final_evaluation.py
+
+      - name: 4. Release Guard Enforcement
+        run: python scripts/release_guard.py
+
+      - name: 5. Cloudflare Security Telemetry Gate
+        run: python scripts/verify_cloudflare_security.py
+
+      - name: 6. Data Security & DLP Verification Gate
+        run: python scripts/verify_data_security.py
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 7. Frontend Production Bundle Build
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: 8. Docker Multi-Stage Image Build
+        run: docker build -t razorpay-ai-risk-manager .
