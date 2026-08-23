@@ -52,7 +52,7 @@ jobs:
       - name: 7. Frontend Production Bundle Build
         working-directory: ./frontend
         run: |
-          npm install
+          npm install --legacy-peer-deps
           npm run build
 
       - name: 8. Docker Multi-Stage Image Build
