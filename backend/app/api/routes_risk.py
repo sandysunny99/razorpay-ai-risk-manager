@@ -45,7 +45,6 @@ def get_risk_overview(db: Session = Depends(get_db)):
 async def investigate_target(req: InvestigationRequest, db: Session = Depends(get_db)):
     agent = RiskManagerAgent(db=db, threat_provider=threat_provider)
     if not req.transaction_id:
-        # Default to the primary demo transaction
         req.transaction_id = "TXN-2026-9042"
     
     try:
@@ -53,3 +52,25 @@ async def investigate_target(req: InvestigationRequest, db: Session = Depends(ge
         return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/step-up/request")
+async def request_step_up(transaction_id: str, db: Session = Depends(get_db)):
+    """Initiates a simulated 2FA Step-Up Challenge for a suspicious transaction."""
+    from app.integrations.razorpay_adapter import MockRazorpayAdapter
+    adapter = MockRazorpayAdapter()
+    challenge = await adapter.request_step_up_challenge(transaction_id)
+    return challenge
+
+@router.post("/step-up/verify")
+async def verify_step_up(challenge_id: str, transaction_id: str, success: bool = True, db: Session = Depends(get_db)):
+    """Verifies a Step-Up Challenge and re-evaluates transaction risk post-challenge."""
+    agent = RiskManagerAgent(db=db, threat_provider=threat_provider)
+    res = await agent.investigate_transaction(transaction_id, simulate_step_up=success)
+    return {
+        "challenge_id": challenge_id,
+        "transaction_id": transaction_id,
+        "verified": success,
+        "status": "VERIFIED_SUCCESSFUL" if success else "CHALLENGE_FAILED",
+        "investigation": res
+    }
+

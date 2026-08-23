@@ -25,6 +25,14 @@ class RazorpayAdapter(ABC):
     async def rotate_token(self, token_id: str) -> Dict[str, Any]:
         pass
 
+    @abstractmethod
+    async def request_step_up_challenge(self, transaction_id: str, challenge_method: str = "SMS_OTP_SIMULATION") -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    async def verify_step_up_challenge(self, challenge_id: str, success: bool = True) -> Dict[str, Any]:
+        pass
+
 class MockRazorpayAdapter(RazorpayAdapter):
     """Deterministic High-Fidelity Mock Adapter for Offline Demo and Test Environments."""
 
@@ -79,6 +87,47 @@ class MockRazorpayAdapter(RazorpayAdapter):
             "message": f"Token successfully rotated to {new_token_id}"
         }
 
+    async def request_step_up_challenge(self, transaction_id: str, challenge_method: str = "SMS_OTP_SIMULATION") -> Dict[str, Any]:
+        challenge_id = f"ch_demo_{datetime.utcnow().strftime('%H%M%S')}_{transaction_id[-4:]}"
+        logger.info(f"[MockRazorpayAdapter] Initiating Step-Up Challenge {challenge_id} for transaction {transaction_id}")
+        return {
+            "success": True,
+            "challenge_id": challenge_id,
+            "transaction_id": transaction_id,
+            "status": "CHALLENGE_REQUIRED",
+            "challenge_method": challenge_method,
+            "created_at": datetime.utcnow().isoformat(),
+            "expires_at": (datetime.utcnow()).isoformat(),
+            "message": "Simulated 2FA Step-Up Challenge initiated successfully."
+        }
+
+    async def verify_step_up_challenge(
+        self,
+        challenge_id: str,
+        success: bool = True,
+        outcome: Optional[str] = None
+    ) -> Dict[str, Any]:
+        result_status = outcome or ("VERIFIED" if success else "FAILED")
+        logger.info(f"[MockRazorpayAdapter] Verifying challenge {challenge_id}: Result={result_status}")
+        
+        is_success = (result_status in ["VERIFIED", "SUCCESS"])
+        if result_status in ["VERIFIED", "SUCCESS"]:
+            msg = "2FA challenge verified successfully. Customer confirmed transaction intent."
+        elif result_status in ["TIMEOUT", "EXPIRED"]:
+            msg = "2FA challenge timed out. Customer did not respond within verification window."
+        elif result_status in ["ABANDONED", "CANCELLED"]:
+            msg = "2FA challenge abandoned by cardholder."
+        else:
+            msg = "2FA challenge failed: Invalid verification credential / OTP mismatch."
+
+        return {
+            "success": is_success,
+            "challenge_id": challenge_id,
+            "status": result_status,
+            "verified_at": datetime.utcnow().isoformat(),
+            "message": msg
+        }
+
 class RazorpayTestAdapter(RazorpayAdapter):
     """Live Razorpay Test Mode Sandbox Adapter."""
 
@@ -124,6 +173,28 @@ class RazorpayTestAdapter(RazorpayAdapter):
             "new_token_id": new_token_id,
             "status": "ROTATED",
             "message": f"Token rotated to {new_token_id}"
+        }
+
+    async def request_step_up_challenge(self, transaction_id: str, challenge_method: str = "SMS_OTP_SIMULATION") -> Dict[str, Any]:
+        challenge_id = f"ch_test_{datetime.utcnow().strftime('%H%M%S')}_{transaction_id[-4:]}"
+        return {
+            "success": True,
+            "challenge_id": challenge_id,
+            "transaction_id": transaction_id,
+            "status": "CHALLENGE_REQUIRED",
+            "challenge_method": challenge_method,
+            "created_at": datetime.utcnow().isoformat(),
+            "expires_at": datetime.utcnow().isoformat(),
+            "message": "Step-up challenge created via Razorpay Sandbox."
+        }
+
+    async def verify_step_up_challenge(self, challenge_id: str, success: bool = True) -> Dict[str, Any]:
+        return {
+            "success": success,
+            "challenge_id": challenge_id,
+            "status": "VERIFIED" if success else "FAILED",
+            "verified_at": datetime.utcnow().isoformat(),
+            "message": "Challenge verified." if success else "Challenge failed."
         }
 
 # Backwards compatible alias

@@ -35,12 +35,23 @@ class InvestigationStep(BaseModel):
     status: str = "SUCCESS"  # SUCCESS, WARNING, FAILED, INFO
     data: Optional[Dict[str, Any]] = None
 
+class ToolAuditItem(BaseModel):
+    tool: str
+    selected: bool
+    reason: str
+
 class InvestigationResponse(BaseModel):
     investigation_id: str
     initial_risk: float
     final_risk: float
     initial_severity: str
     final_severity: str
+    risk_level: str = "LOW"
+    detection_status: str = "CLEAN"  # CLEAN vs SUSPICIOUS
+    response_tier: str = "LOW"  # LOW, MONITOR, STEP_UP, REVIEW, AUTO_REMEDIATE
+    policy_decision: str = "ALLOW"  # ALLOW, MONITOR, STEP_UP_REQUIRED, REVIEW_REQUIRED, AUTO_EXECUTE, NEVER_EXECUTE
+    recommended_action: str = "ALLOW"
+    investigation_level: int = 0  # 0, 1, 2, 3
     action_taken: str
     policy_status: str
     verification_status: str
@@ -48,6 +59,27 @@ class InvestigationResponse(BaseModel):
     timeline: List[InvestigationStep]
     agent_reasoning: str
     explainable_factors: List[FactorItem]
+    tools_requested: List[str] = []
+    tools_executed: List[str] = []
+    tools_skipped: List[str] = []
+    tool_audit: List[ToolAuditItem] = []
+
+class StepUpChallengeRequest(BaseModel):
+    transaction_id: str
+    challenge_method: Optional[str] = "SMS_OTP_SIMULATION"
+
+class StepUpChallengeResponse(BaseModel):
+    challenge_id: str
+    transaction_id: str
+    status: str  # CHALLENGE_REQUIRED, VERIFIED, FAILED, EXPIRED
+    challenge_method: str
+    risk_before: float
+    risk_after: Optional[float] = None
+    response_tier_before: str
+    response_tier_after: Optional[str] = None
+    created_at: datetime
+    expires_at: datetime
+    message: str
 
 class CardResponse(BaseModel):
     card_id: str

@@ -10,6 +10,7 @@ from app.api.routes_tokens import router as tokens_router
 from app.api.routes_cases import router as cases_router
 from app.api.routes_audit import router as audit_router
 from app.api.routes_demo import router as demo_router
+from app.api.routes_evaluation import router as evaluation_router
 
 # Create Database tables
 Base.metadata.create_all(bind=engine)
@@ -42,6 +43,7 @@ app.include_router(tokens_router, prefix=settings.API_V1_STR)
 app.include_router(cases_router, prefix=settings.API_V1_STR)
 app.include_router(audit_router, prefix=settings.API_V1_STR)
 app.include_router(demo_router, prefix=settings.API_V1_STR)
+app.include_router(evaluation_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

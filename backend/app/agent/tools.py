@@ -109,6 +109,55 @@ class AgentToolRegistry:
     async def execute_revoke_token(self, token_id: str, reason: str) -> Dict[str, Any]:
         return await self.razorpay_adapter.revoke_payment_token(token_id, reason)
 
+    async def request_step_up_challenge(self, transaction_id: str, challenge_method: str = "SMS_OTP_SIMULATION") -> Dict[str, Any]:
+        return await self.razorpay_adapter.request_step_up_challenge(transaction_id, challenge_method)
+
+    async def verify_step_up_challenge(
+        self,
+        challenge_id: str,
+        success: bool = True,
+        outcome: Optional[str] = None
+    ) -> Dict[str, Any]:
+        return await self.razorpay_adapter.verify_step_up_challenge(challenge_id, success, outcome)
+
+    def recalculate_after_step_up(
+        self,
+        txn_res: Dict[str, Any],
+        exp_res: Dict[str, Any],
+        crd_res: Dict[str, Any],
+        tok_res: Dict[str, Any],
+        customer_tier: str = "LOW",
+        step_up_verified: bool = True,
+        outcome: str = "SUCCESS"
+    ) -> Dict[str, Any]:
+        """
+        Recalculates risk after 2FA step-up challenge verification.
+        - SUCCESS: Damps transaction velocity/device friction (0.30x) while retaining external threat exposure signals.
+        - FAILED: Escalates transaction risk score (+30.0) due to authentication mismatch.
+        - TIMEOUT / ABANDONED: Retains elevated score and flags incomplete challenge status for SOC review.
+        """
+        adjusted_txn = dict(txn_res)
+        normalized_outcome = outcome.upper()
+
+        if normalized_outcome in ["SUCCESS", "VERIFIED"] and step_up_verified:
+            adjusted_txn["score"] = max(0.0, adjusted_txn.get("score", 0.0) * 0.3)
+            adjusted_txn["reasons"] = [r + " (2FA Step-Up Verified: Friction Damped)" for r in adjusted_txn.get("reasons", [])]
+        elif normalized_outcome in ["FAILED", "INVALID_OTP"]:
+            adjusted_txn["score"] = min(100.0, adjusted_txn.get("score", 0.0) + 30.0)
+            adjusted_txn["reasons"] = [r + " (2FA Step-Up FAILED: Auth Mismatch)" for r in adjusted_txn.get("reasons", [])]
+        elif normalized_outcome in ["TIMEOUT", "EXPIRED"]:
+            adjusted_txn["reasons"] = [r + " (2FA Step-Up TIMEOUT: Verification Incomplete)" for r in adjusted_txn.get("reasons", [])]
+        elif normalized_outcome in ["ABANDONED", "CANCELLED"]:
+            adjusted_txn["reasons"] = [r + " (2FA Step-Up ABANDONED by Cardholder)" for r in adjusted_txn.get("reasons", [])]
+
+        return self.risk_scorer.calculate(
+            transaction_result=adjusted_txn,
+            exposure_result=exp_res,
+            card_result=crd_res,
+            token_result=tok_res,
+            customer_risk_tier=customer_tier
+        )
+
     async def verify_and_recalculate(
         self,
         token: PaymentToken,
@@ -135,7 +184,8 @@ class AgentToolRegistry:
         risk_score: float,
         reason: str,
         actions_taken: List[str],
-        timeline: List[Dict[str, Any]]
+        timeline: List[Dict[str, Any]],
+        merchant_id: str = "mer_default_01"
     ) -> SecurityCase:
         case = SecurityCase(
             case_id=case_id,
@@ -143,6 +193,7 @@ class AgentToolRegistry:
             card_id=card_id,
             token_id=token_id,
             customer_id=customer_id,
+            merchant_id=merchant_id,
             risk_score=risk_score,
             reason=reason,
             status="OPEN",

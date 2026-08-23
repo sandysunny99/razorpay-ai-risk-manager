@@ -7,6 +7,8 @@ import { ZombieTokenAlerts } from './components/ZombieTokenAlerts';
 import { CardRiskTable } from './components/CardRiskTable';
 import { SecurityCasesTable } from './components/SecurityCasesTable';
 import { AuditTrailTable } from './components/AuditTrailTable';
+import { EvaluationDashboard } from './components/EvaluationDashboard';
+import { LiveRiskTable } from './components/LiveRiskTable';
 
 import { api } from './services/api';
 import {
@@ -33,7 +35,7 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isAgentRunning, setIsAgentRunning] = useState<boolean>(false);
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'cards' | 'cases' | 'audit'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'evaluation' | 'liverisk' | 'cards' | 'cases' | 'audit'>('timeline');
 
   const fetchAllData = async () => {
     setIsLoading(true);
@@ -151,7 +153,7 @@ export function App() {
         />
 
         {/* Tab Navigation */}
-        <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-2">
           <button
             onClick={() => setActiveTab('timeline')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
@@ -161,6 +163,26 @@ export function App() {
             }`}
           >
             Agent Investigation Timeline {investigation && '• Active'}
+          </button>
+          <button
+            onClick={() => setActiveTab('evaluation')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
+              activeTab === 'evaluation'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            Model Evaluation & Metrics (Held-Out Test Set)
+          </button>
+          <button
+            onClick={() => setActiveTab('liverisk')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
+              activeTab === 'liverisk'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            Live Risk Screening Stream
           </button>
           <button
             onClick={() => setActiveTab('cards')}
@@ -199,6 +221,17 @@ export function App() {
           <InvestigationTimeline investigation={investigation} />
         )}
 
+        {activeTab === 'evaluation' && (
+          <EvaluationDashboard />
+        )}
+
+        {activeTab === 'liverisk' && (
+          <LiveRiskTable
+            onInvestigateTransaction={() => handleTriggerScenario('golden_compromise')}
+            isInvestigating={isAgentRunning}
+          />
+        )}
+
         {activeTab === 'cards' && (
           <CardRiskTable
             cards={cards}
@@ -219,7 +252,7 @@ export function App() {
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-[#060D17] py-6 px-6 text-center text-xs text-slate-500">
         <p>
-          Razorpay Agentic AI Hackathon • Track: <span className="text-slate-300 font-medium">Risk Manager</span> • Built with HMAC-SHA-256 PAN Fingerprinting & PCI-Aware Security Design
+          Razorpay AI Buildathon 2026 • Track: <span className="text-slate-300 font-medium">AI Risk Manager</span> • Built with HMAC-SHA-256 PAN Fingerprinting & PCI-Aware Security Design
         </p>
       </footer>
     </div>

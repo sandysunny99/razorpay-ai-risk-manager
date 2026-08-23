@@ -15,12 +15,24 @@ export interface InvestigationStep {
   data?: Record<string, any>;
 }
 
+export interface ToolAuditItem {
+  tool: string;
+  selected: boolean;
+  reason: string;
+}
+
 export interface InvestigationResponse {
   investigation_id: string;
   initial_risk: number;
   final_risk: number;
   initial_severity: string;
   final_severity: string;
+  risk_level: string;
+  detection_status: string;
+  response_tier: string;
+  policy_decision: string;
+  recommended_action: string;
+  investigation_level: number;
   action_taken: string;
   policy_status: string;
   verification_status: string;
@@ -28,6 +40,23 @@ export interface InvestigationResponse {
   timeline: InvestigationStep[];
   agent_reasoning: string;
   explainable_factors: FactorItem[];
+  tools_requested?: string[];
+  tools_executed?: string[];
+  tools_skipped?: string[];
+  tool_audit?: ToolAuditItem[];
+}
+
+export interface PolicyTierDistribution {
+  split: string;
+  total_records: number;
+  tier_counts: {
+    LOW: number;
+    MONITOR: number;
+    STEP_UP: number;
+    REVIEW: number;
+    AUTO_REMEDIATE: number;
+  };
+  action_counts: Record<string, number>;
 }
 
 export interface CardItem {
@@ -122,4 +151,66 @@ export interface ScenarioItem {
   card_masked?: string;
   expected_initial_risk?: number | string;
   expected_final_risk?: number | string;
+}
+
+export interface EvaluationMetrics {
+  threshold: number;
+  total_samples: number;
+  tp: number;
+  fp: number;
+  tn: number;
+  fn: number;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  specificity: number;
+  fpr: number;
+  fnr: number;
+  fp_cost_unit: number;
+  fn_cost_unit: number;
+  expected_cost: number;
+}
+
+export interface AblationItem {
+  model_name: string;
+  precision: number;
+  recall: number;
+  f1: number;
+  fpr: number;
+  fnr: number;
+  expected_cost: number;
+}
+
+export interface ThresholdSweepItem {
+  threshold: number;
+  tp: number;
+  fp: number;
+  tn: number;
+  fn: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  expected_cost: number;
+}
+
+export interface EvaluationTransactionItem {
+  transaction_id: string;
+  merchant_id: string;
+  customer_id: string;
+  card_masked: string;
+  amount: number;
+  currency: string;
+  country: string;
+  customer_country: string;
+  velocity_10m: number;
+  card_exposed: boolean;
+  exposure_confidence: number;
+  exposure_source: string;
+  token_active: boolean;
+  is_zombie_token: boolean;
+  calculated_risk_score: number;
+  severity: string;
+  recommended_action: string;
+  label: number;
 }

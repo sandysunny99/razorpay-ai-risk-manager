@@ -109,4 +109,56 @@ export const api = {
     if (!res.ok) throw new Error('Failed to fetch audit events');
     return res.json();
   },
+
+  async getEvaluationMetrics(split: string = 'test.jsonl', threshold: number = 75.0): Promise<any> {
+    const res = await fetch(`${API_BASE}/evaluation/metrics?split=${split}&threshold=${threshold}`);
+    if (!res.ok) throw new Error('Failed to fetch evaluation metrics');
+    return res.json();
+  },
+
+  async getAblationStudy(split: string = 'test.jsonl'): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/evaluation/ablation?split=${split}`);
+    if (!res.ok) throw new Error('Failed to fetch ablation study');
+    return res.json();
+  },
+
+  async getThresholdSweep(split: string = 'test.jsonl'): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/evaluation/thresholds?split=${split}`);
+    if (!res.ok) throw new Error('Failed to fetch threshold sweep');
+    return res.json();
+  },
+
+  async getEvaluationTransactions(split: string = 'test.jsonl', limit: number = 50): Promise<any> {
+    const res = await fetch(`${API_BASE}/evaluation/transactions?split=${split}&limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to fetch evaluation transactions');
+    return res.json();
+  },
+
+  async getErrorAnalysis(split: string = 'test.jsonl', threshold: number = 75.0): Promise<any> {
+    const res = await fetch(`${API_BASE}/evaluation/errors?split=${split}&threshold=${threshold}`);
+    if (!res.ok) throw new Error('Failed to fetch error analysis');
+    return res.json();
+  },
+
+  async getPolicyTiers(split: string = 'validation.jsonl'): Promise<any> {
+    const res = await fetch(`${API_BASE}/evaluation/tiers?split=${split}`);
+    if (!res.ok) throw new Error('Failed to fetch policy tiers');
+    return res.json();
+  },
+
+  async requestStepUp(transactionId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/risk/step-up/request?transaction_id=${transactionId}`, {
+      method: 'POST'
+    });
+    if (!res.ok) throw new Error('Failed to initiate step-up challenge');
+    return res.json();
+  },
+
+  async verifyStepUp(challengeId: string, transactionId: string, success: boolean = true): Promise<any> {
+    const res = await fetch(`${API_BASE}/risk/step-up/verify?challenge_id=${challengeId}&transaction_id=${transactionId}&success=${success}`, {
+      method: 'POST'
+    });
+    if (!res.ok) throw new Error('Failed to verify step-up challenge');
+    return res.json();
+  },
 };

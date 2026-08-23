@@ -83,38 +83,68 @@ export const InvestigationTimeline: React.FC<InvestigationTimelineProps> = ({ in
         </div>
       </div>
 
-      {/* Verified Action and Policy Badges */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
-            <Zap className="w-4 h-4" />
+      {/* Verified Action, Policy & Tier Badges */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800">
+          <div className="text-[10px] text-slate-400 uppercase font-semibold">Detection Status</div>
+          <div className={`text-xs font-bold font-mono mt-0.5 ${investigation.detection_status === 'SUSPICIOUS' ? 'text-amber-400' : 'text-emerald-400'}`}>
+            {investigation.detection_status || 'CLEAN'}
           </div>
-          <div>
-            <div className="text-[11px] text-slate-400">Action Executed</div>
-            <div className="text-xs font-bold text-white truncate">{investigation.action_taken}</div>
-          </div>
+          <span className="text-[9px] text-slate-500">Broad Detection Layer</span>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-            <ShieldCheck className="w-4 h-4" />
+        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800">
+          <div className="text-[10px] text-slate-400 uppercase font-semibold">Response Tier</div>
+          <div className="text-xs font-bold text-blue-400 font-mono mt-0.5">
+            {investigation.response_tier || 'LOW'}
           </div>
-          <div>
-            <div className="text-[11px] text-slate-400">Gateway Verification</div>
-            <div className="text-xs font-bold text-emerald-400">{investigation.verification_status}</div>
-          </div>
+          <span className="text-[9px] text-slate-500">Level {investigation.investigation_level || 0} Investigation</span>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400">
-            <FileText className="w-4 h-4" />
+        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800">
+          <div className="text-[10px] text-slate-400 uppercase font-semibold">Policy Decision</div>
+          <div className="text-xs font-bold text-white font-mono mt-0.5 truncate">
+            {investigation.policy_decision || investigation.policy_status}
           </div>
-          <div>
-            <div className="text-[11px] text-slate-400">Security Case Created</div>
-            <div className="text-xs font-bold text-purple-300 font-mono">{investigation.case_id}</div>
+          <span className="text-[9px] text-slate-500">{investigation.recommended_action}</span>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800">
+          <div className="text-[10px] text-slate-400 uppercase font-semibold">Gateway Verification</div>
+          <div className="text-xs font-bold text-emerald-400 font-mono mt-0.5 truncate">
+            {investigation.verification_status}
           </div>
+          <span className="text-[9px] text-slate-500">{investigation.case_id || 'No Case Required'}</span>
         </div>
       </div>
+
+      {/* Dynamic Tool Selection Audit */}
+      {investigation.tool_audit && investigation.tool_audit.length > 0 && (
+        <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Dynamic Agent Tool Selection & Audit ({investigation.tools_executed?.length || 0} executed, {investigation.tools_skipped?.length || 0} skipped)
+            </h4>
+            <span className="text-[10px] font-mono text-blue-400">Contextual Efficiency</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            {investigation.tool_audit.map((t, idx) => (
+              <div key={idx} className={`p-2 rounded-lg border text-[11px] flex items-start justify-between gap-2 ${t.selected ? 'bg-slate-900/70 border-slate-700' : 'bg-slate-950/40 border-slate-800/60 opacity-60'}`}>
+                <div>
+                  <span className={`font-mono font-bold ${t.selected ? 'text-blue-300' : 'text-slate-500'}`}>
+                    {t.tool}()
+                  </span>
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{t.reason}</p>
+                </div>
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${t.selected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'}`}>
+                  {t.selected ? 'EXECUTED' : 'SKIPPED'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Step-by-Step Investigation Trail */}
       <div className="space-y-3">

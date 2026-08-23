@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PaymentRiskEvaluationRecord",
+  "description": "Schema for synthetic payment risk evaluation and benchmark dataset.",
+  "type": "object",
+  "properties": {
+    "transaction_id": {
+      "type": "string",
+      "description": "Unique identifier for the synthetic transaction (e.g. eval_0001)."
+    },
+    "merchant_id": {
+      "type": "string",
+      "description": "Identifier for the merchant entity."
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Identifier for the customer entity."
+    },
+    "card_masked": {
+      "type": "string",
+      "description": "Masked representation of the card (e.g. **** **** **** 4921)."
+    },
+    "card_fingerprint": {
+      "type": "string",
+      "description": "HMAC-SHA-256 zero-knowledge card fingerprint hash."
+    },
+    "amount": {
+      "type": "number",
+      "minimum": 1.0,
+      "description": "Transaction amount in INR."
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["INR"],
+      "default": "INR"
+    },
+    "country": {
+      "type": "string",
+      "description": "ISO 2-letter country code of transaction origin IP."
+    },
+    "customer_country": {
+      "type": "string",
+      "description": "ISO 2-letter country code of customer's registered home country."
+    },
+    "velocity_10m": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of transaction attempts in the preceding 10-minute window."
+    },
+    "card_exposed": {
+      "type": "boolean",
+      "description": "Whether the card fingerprint was matched in threat intelligence breach dumps."
+    },
+    "exposure_confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Confidence score of the threat intelligence match (0.0 to 1.0)."
+    },
+    "exposure_source": {
+      "type": "string",
+      "description": "Threat feed source name (e.g. RedLine_Stealer_Dump, Telegram_Paste, None)."
+    },
+    "token_active": {
+      "type": "boolean",
+      "description": "Whether an active vault payment token exists for this card."
+    },
+    "token_age_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Age of the payment token in days."
+    },
+    "is_zombie_token": {
+      "type": "boolean",
+      "description": "Whether the active token is linked to an expired, blocked, or replaced card."
+    },
+    "card_expired": {
+      "type": "boolean",
+      "description": "Whether the underlying physical card has passed its expiration date."
+    },
+    "device_new": {
+      "type": "boolean",
+      "description": "Whether the transaction is originating from an unrecognized device ID."
+    },
+    "failed_attempts_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of historical authorization failures in last 24 hours."
+    },
+    "label": {
+      "type": "integer",
+      "enum": [0, 1],
+      "description": "Ground truth label: 1 = Compromised credential loss / fraud, 0 = Legitimate payment."
+    }
+  },
+  "required": [
+    "transaction_id",
+    "merchant_id",
+    "customer_id",
+    "amount",
+    "country",
+    "customer_country",
+    "velocity_10m",
+    "card_exposed",
+    "exposure_confidence",
+    "token_active",
+    "label"
+  ]
+}
