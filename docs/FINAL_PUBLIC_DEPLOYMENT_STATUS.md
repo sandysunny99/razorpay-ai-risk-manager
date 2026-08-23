@@ -3,8 +3,8 @@
 **Project**: Razorpay AI Risk Manager Agent  
 **Hackathon**: Razorpay AI Buildathon 2026 (Track: AI Risk Manager)  
 **Release Version**: `v2.0.0-rc1`  
-**Commit Hash**: `3b14370` (Tagged `v2.0.0-rc1`, Branch: `main` & `feature/risk-manager-webapp-security`)  
-**Timestamp**: 2026-08-23T16:47:00+05:30  
+**Commit Hash**: `c1e1814` (Tagged `v2.0.0-rc1`, Branch: `main` & `feature/risk-manager-webapp-security`)  
+**Timestamp**: 2026-08-23T17:30:00+05:30  
 **Submission Readiness**: **READY_FOR_SUBMISSION**  
 
 ---
@@ -14,7 +14,7 @@
 | Pipeline Component | Verified Runtime Status | Verification Evidence / Specification |
 | :--- | :--- | :--- |
 | **GitHub Repository** | **LIVE / PUSHED** | [`sandysunny99/razorpay-ai-risk-manager`](https://github.com/sandysunny99/razorpay-ai-risk-manager) with [`.github/workflows/ci.yml`](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/.github/workflows/ci.yml) |
-| **Commit / Tag** | **`3b14370` / `v2.0.0-rc1`** | Clean working tree; release tag points to verified commit |
+| **Commit / Tag** | **`c1e1814` / `v2.0.0-rc1`** | Clean working tree; release tag points to verified commit |
 | **GitHub CI Workflow** | **PASS** | Automated 8-stage pipeline: tests, evaluation, security, DLP, frontend, Docker |
 | **Render Cloud Deploy** | **DEPLOYMENT_CONFIGURED** | Multi-stage Docker service configured via [`render.yaml`](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/render.yaml) & [`Dockerfile`](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/Dockerfile) |
 | **Custom Domain** | **NOT_CONFIGURED** | Custom domain routing ready via Cloudflare CNAME to Render origin |
