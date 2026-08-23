@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, ShieldAlert, Cpu, Lock, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Lock, RefreshCw, Cpu, Database, Eye } from 'lucide-react';
 
 interface HeaderProps {
   onRefresh: () => void;
@@ -20,26 +20,37 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isLoading, systemStat
           <div>
             <div className="flex items-center space-x-3">
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                RAZORPAY <span className="text-blue-400 font-semibold">RISK MANAGER AGENT</span>
+                RAZORPAY <span className="text-blue-400 font-semibold">AI RISK MANAGER</span>
               </h1>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                Agentic v1.0
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                v2.0.0-rc1
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                DEMO / TEST MODE
               </span>
             </div>
-            <p className="text-xs text-slate-400">
-              Agentic security layer for payment risk, card exposure, token protection & controlled remediation
+            <p className="text-xs text-slate-400 mt-0.5">
+              Broad Risk Detection (88.06% Recall) • Policy-Controlled Auto-Action (100% Precision) • Defense-in-Depth
             </p>
           </div>
         </div>
 
-        {/* Status Indicators & Refresh */}
-        <div className="flex items-center space-x-3">
-          {dryRun && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/30">
-              <Lock className="w-3.5 h-3.5" />
-              DRY_RUN PROTECTED
+        {/* Status Indicators & Subsystem Badges */}
+        <div className="flex items-center space-x-2.5">
+          <div className="hidden lg:flex items-center space-x-2 text-[11px] font-mono text-slate-400">
+            <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-slate-300">
+              Cloudflare: <strong className="text-indigo-400 font-semibold">SIMULATED</strong>
             </span>
-          )}
+            <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-slate-300">
+              Razorpay: <strong className="text-amber-400 font-semibold">TEST/MOCK</strong>
+            </span>
+            <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-slate-300">
+              CTI: <strong className="text-purple-400 font-semibold">SYNTHETIC</strong>
+            </span>
+            <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-slate-300">
+              DLP: <strong className="text-emerald-400 font-semibold">VALIDATED</strong>
+            </span>
+          </div>
 
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>

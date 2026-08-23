@@ -158,6 +158,7 @@ In the SOC Dashboard (`http://localhost:5173`), click **"Scenario 1: Stealer Dum
 
 ## 📚 Technical Documentation Index
 
+- [docs/FINAL_RELEASE_TRUTH_MATRIX.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_TRUTH_MATRIX.md) - Final Release Truth & Allowed Claims Matrix (v2.0.0-rc1)
 - [docs/FINAL_RELEASE_STATUS.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_STATUS.md) - Final Release Status Specification (v2.0.0-rc1)
 - [docs/FINAL_RELEASE_EVIDENCE_MATRIX.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_EVIDENCE_MATRIX.md) - Final Release Evidence Matrix (v2.0.0-rc1)
 - [docs/FINAL_SUBMISSION_CHECKLIST.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_SUBMISSION_CHECKLIST.md) - Final Hackathon Submission Checklist & Release Sign-Off

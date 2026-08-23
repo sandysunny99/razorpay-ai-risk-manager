@@ -73,7 +73,7 @@ export function SecurityCenter() {
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Data at Rest</span>
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">PASS</span>
+            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">VALIDATED</span>
           </div>
           <div className="flex items-center space-x-2 text-white font-semibold text-sm">
             <Lock className="w-4 h-4 text-emerald-400" />
@@ -85,7 +85,7 @@ export function SecurityCenter() {
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Data in Transit</span>
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">PASS</span>
+            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">VALIDATED</span>
           </div>
           <div className="flex items-center space-x-2 text-white font-semibold text-sm">
             <Radio className="w-4 h-4 text-cyan-400" />
@@ -97,7 +97,7 @@ export function SecurityCenter() {
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">DLP & Masking</span>
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">PASS</span>
+            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">VALIDATED</span>
           </div>
           <div className="flex items-center space-x-2 text-white font-semibold text-sm">
             <EyeOff className="w-4 h-4 text-amber-400" />
@@ -109,13 +109,13 @@ export function SecurityCenter() {
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Edge Perimeter</span>
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">PASS</span>
+            <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded">SIMULATED</span>
           </div>
           <div className="flex items-center space-x-2 text-white font-semibold text-sm">
             <Server className="w-4 h-4 text-indigo-400" />
             <span>Cloudflare Edge</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">OWASP WAF ruleset, Token-bucket rate limiting, and Turnstile bot protection.</p>
+          <p className="text-xs text-slate-400 mt-1">Simulated adapter telemetry: WAF ruleset, 1-99 bot score taxonomy, and CF-Ray tracing.</p>
         </div>
       </div>
 
