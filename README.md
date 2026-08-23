@@ -158,6 +158,11 @@ In the SOC Dashboard (`http://localhost:5173`), click **"Scenario 1: Stealer Dum
 
 ## 📚 Technical Documentation Index
 
+- [docs/FINAL_SUBMISSION_CHECKLIST.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_SUBMISSION_CHECKLIST.md) - Final Hackathon Submission Checklist & Release Sign-Off
+- [docs/LIVE_SECURITY_VERIFICATION.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/LIVE_SECURITY_VERIFICATION.md) - Live Security Verification & Data Boundary Inspection Report
+- [docs/LIVE_BROWSER_E2E.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/LIVE_BROWSER_E2E.md) - Live Browser End-to-End (E2E) Test & Presentation Walkthrough
+- [docs/LIVE_DEPLOYMENT_RESULT.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/LIVE_DEPLOYMENT_RESULT.md) - Live Deployment Result & Public Service Specification
+- [docs/DOCKER_VERIFICATION.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DOCKER_VERIFICATION.md) - Docker Containerization & Multi-Stage Image Verification
 - [docs/FINAL_RELEASE_V2.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_RELEASE_V2.md) - Final Release Specification (v2.0.0-rc1)
 - [docs/FINAL_INTEGRATION_BASELINE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/FINAL_INTEGRATION_BASELINE.md) - Final Integration Baseline Lock
 - [docs/DEPLOYMENT_EVIDENCE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DEPLOYMENT_EVIDENCE.md) - Deployment Evidence & Verification Record
