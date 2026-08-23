@@ -1,23 +1,84 @@
-import React from 'react';
-import { History, ShieldCheck, CheckCircle2, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { History, ShieldCheck, CheckCircle2, AlertTriangle, Link2, RefreshCw } from 'lucide-react';
 import { AuditEvent } from '../types';
+import { api } from '../services/api';
 
 interface AuditTrailTableProps {
   events: AuditEvent[];
 }
 
 export const AuditTrailTable: React.FC<AuditTrailTableProps> = ({ events }) => {
+  const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+
+  const handleVerifyChain = async () => {
+    setIsVerifying(true);
+    try {
+      const result = await api.verifyAuditChain();
+      setVerificationResult(result);
+    } catch (err) {
+      console.error('Verification failed', err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   return (
     <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <History className="w-5 h-5 text-emerald-400" />
-          <h3 className="text-lg font-bold text-white tracking-tight">
-            IMMUTABLE SECURITY AUDIT TRAIL
-          </h3>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <History className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              TAMPER-EVIDENT HASH-CHAINED AUDIT LEDGER
+            </h3>
+          </div>
+          <p className="text-xs text-slate-400">
+            Cryptographically linked blocks: <span className="font-mono text-emerald-400">curr_hash = SHA256(data + prev_hash)</span>
+          </p>
         </div>
-        <span className="text-xs text-slate-400">Cryptographically Recorded Decisions</span>
+
+        <button
+          onClick={handleVerifyChain}
+          disabled={isVerifying || events.length === 0}
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold border border-emerald-500/40 transition disabled:opacity-50"
+        >
+          {isVerifying ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Link2 className="w-3.5 h-3.5" />
+          )}
+          <span>Verify Hash Chain Integrity</span>
+        </button>
       </div>
+
+      {verificationResult && (
+        <div
+          className={`p-3.5 rounded-xl border flex items-center justify-between text-xs ${
+            verificationResult.valid
+              ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+              : 'bg-rose-950/30 border-rose-500/40 text-rose-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {verificationResult.valid ? (
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-400" />
+            )}
+            <span className="font-semibold">
+              {verificationResult.valid
+                ? `Cryptographic Proof Confirmed: ${verificationResult.total_events} blocks validated with 0 tampering detected.`
+                : `WARNING: Tampering detected across ${verificationResult.tampered_events.length} blocks!`}
+            </span>
+          </div>
+          {verificationResult.head_hash && (
+            <span className="font-mono text-[10px] text-slate-400 truncate max-w-xs">
+              Head: {verificationResult.head_hash.slice(0, 16)}...
+            </span>
+          )}
+        </div>
+      )}
 
       {events.length === 0 ? (
         <div className="p-8 text-center text-slate-500 text-xs border border-slate-800/80 rounded-xl bg-slate-900/30">

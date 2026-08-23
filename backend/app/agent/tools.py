@@ -11,11 +11,39 @@ from app.engines.policy_engine import PolicyEngine
 from app.engines.verification_engine import VerificationEngine
 from app.integrations.razorpay_adapter import RazorpayPaymentAdapter
 
+from app.engines.audit_ledger import AuditLedgerEngine
+
+class ToolImpact:
+    READ_ONLY = "READ_ONLY"
+    LOW_IMPACT = "LOW_IMPACT"
+    HIGH_IMPACT = "HIGH_IMPACT"
+    CRITICAL = "CRITICAL"
+    NEVER_EXECUTE = "NEVER_EXECUTE"
+
 class AgentToolRegistry:
     """
     Registry of specialized risk management tools exposed to the Agent.
-    All sensitive actions are routed through policy guardrails and verification.
+    All sensitive actions are strictly classified and gated by policy guardrails.
     """
+
+    TOOL_SECURITY_CLASSIFICATIONS = {
+        "get_transaction": ToolImpact.READ_ONLY,
+        "get_card": ToolImpact.READ_ONLY,
+        "get_token": ToolImpact.READ_ONLY,
+        "get_customer": ToolImpact.READ_ONLY,
+        "check_card_exposure": ToolImpact.READ_ONLY,
+        "evaluate_transaction_risk": ToolImpact.READ_ONLY,
+        "evaluate_card_risk": ToolImpact.READ_ONLY,
+        "evaluate_token_risk": ToolImpact.READ_ONLY,
+        "calculate_composite_risk": ToolImpact.READ_ONLY,
+        "check_policy": ToolImpact.READ_ONLY,
+        "create_case": ToolImpact.LOW_IMPACT,
+        "write_audit": ToolImpact.LOW_IMPACT,
+        "execute_revoke_token": ToolImpact.HIGH_IMPACT,
+        "verify_and_recalculate": ToolImpact.HIGH_IMPACT,
+        "suspend_card": ToolImpact.CRITICAL,
+        "transfer_funds": ToolImpact.NEVER_EXECUTE,
+    }
 
     def __init__(
         self,
@@ -140,19 +168,16 @@ class AgentToolRegistry:
         verification: str,
         details: Dict[str, Any]
     ) -> AuditEvent:
-        event = AuditEvent(
+        return AuditLedgerEngine.append_event(
+            db=self.db,
             event_id=event_id,
             actor=actor,
-            agent_decision=decision,
+            decision=decision,
             risk_score=risk_score,
-            policy_evaluated=policy,
-            tool_used=tool,
+            policy=policy,
+            tool=tool,
             action_requested=action_requested,
             action_executed=action_executed,
-            verification_result=verification,
+            verification=verification,
             details=details
         )
-        self.db.add(event)
-        self.db.commit()
-        self.db.refresh(event)
-        return event

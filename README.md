@@ -4,7 +4,7 @@
 
 ![Razorpay Risk Manager Banner](https://img.shields.io/badge/Razorpay-Risk%20Manager%20Agent-0D83FF?style=for-the-badge&logo=shield&logoColor=white)
 ![Build Status](https://img.shields.io/badge/Build-Passing-10B981?style=for-the-badge)
-![Security Standard](https://img.shields.io/badge/Security-PCI--DSS%20Compliant%20%7C%20Zero--Knowledge%20HMAC-6366F1?style=for-the-badge)
+![Security Standard](https://img.shields.io/badge/Security-PCI--Aware%20Design%20%7C%20HMAC--SHA--256%20PAN%20Fingerprinting-6366F1?style=for-the-badge)
 ![Hackathon Track](https://img.shields.io/badge/Track-Risk%20Manager-F59E0B?style=for-the-badge)
 
 **"An agentic security layer for payment risk, card exposure, token protection, and policy-controlled remediation."**
@@ -16,13 +16,13 @@
 ## 🎯 Overview & Product Vision
 
 Payment risk rarely appears as a single obvious fraudulent transaction. In modern cybercrime ecosystems, risk emerges from the correlation of fragmented signals:
-- **Card exposure** on dark-web stealer logs and paste dumps
+- **Card exposure** on dark-web stealer logs and paste dumps (supported via pluggable threat provider architecture)
 - **Active payment tokens** left vulnerable to unauthorized exploitation
 - **Zombie tokens** persisting in vaults on expired/cancelled cards
 - **Transaction velocity and cross-border geographic anomalies**
 - **Customer behavioral deviations**
 
-The **Razorpay Risk Manager Agent** is an autonomous AI risk orchestration system that executes the complete risk lifecycle:
+The **Razorpay Risk Manager Agent** is an autonomous prototype risk orchestration system designed for Razorpay's payment ecosystem that executes the complete risk lifecycle:
 
 $$\text{OBSERVE} \longrightarrow \text{DETECT} \longrightarrow \text{INVESTIGATE} \longrightarrow \text{CORRELATE} \longrightarrow \text{REASON} \longrightarrow \text{ASSESS RISK} \longrightarrow \text{CHECK POLICY} \longrightarrow \text{ACT} \longrightarrow \text{VERIFY} \longrightarrow \text{AUDIT}$$
 
@@ -30,7 +30,7 @@ $$\text{OBSERVE} \longrightarrow \text{DETECT} \longrightarrow \text{INVESTIGATE
 
 ## 🚀 Key Innovations & Capabilities
 
-1. **Zero-Knowledge HMAC-SHA256 Card Fingerprinting**: Raw PANs, CVVs, and PINs are **never stored, logged, or sent to an LLM**. Exposure feeds are matched using one-way HMAC-SHA256 cryptographic fingerprints.
+1. **HMAC-SHA-256 PAN Fingerprinting**: Raw PANs, CVVs, and PINs are **never stored, logged, or sent to an LLM**. Exposure feeds are matched using one-way HMAC-SHA-256 cryptographic fingerprints.
 2. **Deterministic Zombie Token Detection**: Continuously monitors the portfolio to identify active vault tokens attached to expired or blocked cards, eliminating recurring liability.
 3. **Pluggable Threat Intelligence Abstraction**: Decoupled `ThreatIntelProvider` supporting offline high-fidelity synthetic scenarios (9 test cases), breach dumps, and dark-web stealer feeds.
 4. **Policy Guardrail Engine**: The AI Agent never acts unconstrained. Actions are strictly gated:
@@ -38,7 +38,8 @@ $$\text{OBSERVE} \longrightarrow \text{DETECT} \longrightarrow \text{INVESTIGATE
    - `REVIEW_REQUIRED`: Card suspension (high customer friction)
    - `NEVER_EXECUTE`: Financial transfers / refunds
 5. **Verified State Transition**: Employs the `ACT → VERIFY → RECALCULATE` loop to verify gateway state transitions before updating risk scores.
-6. **SOC Security Dashboard**: High-fidelity React dashboard with live agent execution timelines, risk badges, zombie token monitors, and cryptographic audit logs.
+6. **Tamper-Evident Hash-Chained Audit Ledger**: All agent decisions and gateway remediations are chained with SHA-256 hashes (`curr_hash = SHA256(data + prev_hash)`), providing cryptographic verification against tampering.
+7. **SOC Security Dashboard**: High-fidelity React dashboard with live agent execution timelines, risk badges, zombie token monitors, and cryptographic audit validation.
 
 ---
 

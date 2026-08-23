@@ -36,6 +36,28 @@ export const api = {
     return res.json();
   },
 
+  async triggerPolicyDenialDemo(): Promise<any> {
+    const res = await fetch(`${API_BASE}/demo/trigger-policy-denial-scenario`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Policy denial scenario trigger failed');
+    return res.json();
+  },
+
+  async triggerPromptInjectionDemo(): Promise<any> {
+    const res = await fetch(`${API_BASE}/demo/trigger-prompt-injection-scenario`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Prompt injection scenario trigger failed');
+    return res.json();
+  },
+
+  async verifyAuditChain(): Promise<{ valid: boolean; total_events: number; status: string; tampered_events: any[]; head_hash?: string }> {
+    const res = await fetch(`${API_BASE}/audit/verify`);
+    if (!res.ok) throw new Error('Audit chain verification failed');
+    return res.json();
+  },
+
   async getScenarios(): Promise<ScenarioItem[]> {
     const res = await fetch(`${API_BASE}/demo/scenarios`);
     if (!res.ok) throw new Error('Failed to fetch scenarios');

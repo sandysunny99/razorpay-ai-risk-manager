@@ -66,16 +66,30 @@ export function App() {
     fetchAllData();
   }, []);
 
-  const handleTriggerGoldenDemo = async () => {
+  const handleTriggerScenario = async (scenarioId: string) => {
     setIsAgentRunning(true);
     try {
-      const result = await api.triggerGoldenDemo();
-      setInvestigation(result);
-      setActiveTab('timeline');
-      // Refresh inventory and case logs
+      if (scenarioId === 'golden_compromise') {
+        const result = await api.triggerGoldenDemo();
+        setInvestigation(result);
+        setActiveTab('timeline');
+      } else if (scenarioId === 'policy_denial') {
+        const result = await api.triggerPolicyDenialDemo();
+        alert(`Guardrail Test Result:\n\nAction: ${result.action_requested}\nDecision: ${result.policy_decision.decision}\nReason: ${result.policy_decision.reason}\n\nGuardrail Enforced: ${result.guardrail_enforced}`);
+      } else if (scenarioId === 'prompt_injection') {
+        const result = await api.triggerPromptInjectionDemo();
+        alert(`Prompt Injection Defense Test:\n\nRaw Payload: ${result.raw_payload}\n\nSanitized: ${result.sanitized_payload}\n\nIsolation: ${result.data_isolation}\n\nStatus: ${result.defense_status}`);
+      } else if (scenarioId === 'clean_transaction') {
+        const result = await api.triggerInvestigation('TXN-2026-1001');
+        setInvestigation(result);
+        setActiveTab('timeline');
+      } else if (scenarioId === 'zombie_token_scan') {
+        await fetchAllData();
+        setActiveTab('cards');
+      }
       await fetchAllData();
     } catch (err) {
-      console.error('Golden demo failed:', err);
+      console.error('Scenario execution failed:', err);
     } finally {
       setIsAgentRunning(false);
     }
@@ -123,7 +137,7 @@ export function App() {
 
         {/* Demo Scenario Controller */}
         <DemoScenarioTrigger
-          onTriggerGoldenDemo={handleTriggerGoldenDemo}
+          onTriggerScenario={handleTriggerScenario}
           onResetData={handleResetData}
           scenarios={scenarios}
           isRunning={isAgentRunning}
@@ -176,7 +190,7 @@ export function App() {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            Audit Trail ({auditEvents.length})
+            Tamper-Evident Audit Trail ({auditEvents.length})
           </button>
         </div>
 
@@ -188,7 +202,7 @@ export function App() {
         {activeTab === 'cards' && (
           <CardRiskTable
             cards={cards}
-            onInvestigateCard={() => handleTriggerGoldenDemo()}
+            onInvestigateCard={() => handleTriggerScenario('golden_compromise')}
             isInvestigating={isAgentRunning}
           />
         )}
@@ -205,7 +219,7 @@ export function App() {
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-[#060D17] py-6 px-6 text-center text-xs text-slate-500">
         <p>
-          Razorpay Agentic AI Hackathon • Track: <span className="text-slate-300 font-medium">Risk Manager</span> • Built with HMAC-SHA256 Zero-Knowledge Security
+          Razorpay Agentic AI Hackathon • Track: <span className="text-slate-300 font-medium">Risk Manager</span> • Built with HMAC-SHA-256 PAN Fingerprinting & PCI-Aware Security Design
         </p>
       </footer>
     </div>

@@ -3,19 +3,36 @@ import { Play, Sparkles, RotateCcw, AlertTriangle, CheckCircle, ShieldAlert } fr
 import { ScenarioItem } from '../types';
 
 interface DemoScenarioTriggerProps {
-  onTriggerGoldenDemo: () => void;
+  onTriggerScenario: (scenarioId: string) => void;
   onResetData: () => void;
   scenarios: ScenarioItem[];
   isRunning: boolean;
 }
 
 export const DemoScenarioTrigger: React.FC<DemoScenarioTriggerProps> = ({
-  onTriggerGoldenDemo,
+  onTriggerScenario,
   onResetData,
   scenarios,
   isRunning,
 }) => {
   const [selectedScenario, setSelectedScenario] = useState<string>('golden_compromise');
+
+  const getButtonText = () => {
+    switch (selectedScenario) {
+      case 'golden_compromise':
+        return 'Execute Golden Attack Demo (₹18,500)';
+      case 'policy_denial':
+        return 'Test Policy Guardrail Denial';
+      case 'prompt_injection':
+        return 'Test Prompt Injection Defense';
+      case 'zombie_token_scan':
+        return 'Trigger Zombie Token Scan';
+      case 'clean_transaction':
+        return 'Test Clean Domestic Benchmark';
+      default:
+        return 'Execute Selected Scenario';
+    }
+  };
 
   return (
     <div className="bg-[#0F2238] border border-blue-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden">
@@ -47,56 +64,71 @@ export const DemoScenarioTrigger: React.FC<DemoScenarioTriggerProps> = ({
           </button>
 
           <button
-            onClick={onTriggerGoldenDemo}
+            onClick={() => onTriggerScenario(selectedScenario)}
             disabled={isRunning}
             className="flex items-center gap-2.5 px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold shadow-lg shadow-blue-500/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
           >
             {isRunning ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                <span>Agent Investigating Attack...</span>
+                <span>Agent Investigating...</span>
               </>
             ) : (
               <>
                 <Play className="w-4 h-4 fill-white" />
-                <span>Execute Golden Attack Demo (₹18,500)</span>
+                <span>{getButtonText()}</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Scenario Explainer Card */}
-      <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Scenario Explainer Cards */}
+      <div className="mt-5 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {scenarios.map((sc) => (
           <div
             key={sc.id}
             onClick={() => setSelectedScenario(sc.id)}
-            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
               selectedScenario === sc.id
                 ? 'bg-blue-900/30 border-blue-500/60 ring-1 ring-blue-500/40'
                 : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
             }`}
           >
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-white truncate">{sc.name}</span>
-              {sc.id === 'golden_compromise' && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  CRITICAL
-                </span>
-              )}
-              {sc.id === 'zombie_token_scan' && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  ZOMBIE
-                </span>
-              )}
-              {sc.id === 'clean_transaction' && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  CLEAN
-                </span>
-              )}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-white truncate">{sc.name}</span>
+                {sc.id === 'golden_compromise' && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    CRITICAL
+                  </span>
+                )}
+                {sc.id === 'policy_denial' && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    GUARDRAIL
+                  </span>
+                )}
+                {sc.id === 'prompt_injection' && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    DEFENSE
+                  </span>
+                )}
+                {sc.id === 'zombie_token_scan' && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    ZOMBIE
+                  </span>
+                )}
+                {sc.id === 'clean_transaction' && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    CLEAN
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 line-clamp-3 leading-relaxed">{sc.description}</p>
             </div>
-            <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">{sc.description}</p>
+            <div className="mt-2 text-[10px] font-medium text-blue-400">
+              {selectedScenario === sc.id ? '● Selected for Demo' : 'Click to select'}
+            </div>
           </div>
         ))}
       </div>

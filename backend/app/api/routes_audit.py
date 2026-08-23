@@ -1,15 +1,16 @@
-from typing import List
+from typing import List, Dict, Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.entities import AuditEvent
 from app.models.schemas import AuditEventResponse
+from app.engines.audit_ledger import AuditLedgerEngine
 
 router = APIRouter(prefix="/audit", tags=["Audit Trail"])
 
 @router.get("/events", response_model=List[AuditEventResponse])
 def list_audit_events(db: Session = Depends(get_db)):
-    events = db.query(AuditEvent).order_by(AuditEvent.created_at.desc()).all()
+    events = db.query(AuditEvent).order_by(AuditEvent.id.desc()).all()
     return [
         AuditEventResponse(
             event_id=e.event_id,
@@ -25,3 +26,8 @@ def list_audit_events(db: Session = Depends(get_db)):
             created_at=e.created_at
         ) for e in events
     ]
+
+@router.get("/verify")
+def verify_audit_chain(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Cryptographically validates the hash chain from genesis to head."""
+    return AuditLedgerEngine.verify_chain_integrity(db)
