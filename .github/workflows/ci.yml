@@ -2,9 +2,16 @@ name: CI Quality Gate & Security Pipeline
 
 on:
   push:
-    branches: [ main, feature/* ]
+    branches:
+      - main
+      - 'feature/**'
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate-and-build:
@@ -21,6 +28,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Environment Diagnostics
+        run: |
+          echo "Operating System: $(uname -a)"
+          echo "Python: $(python --version)"
+          echo "Pip: $(pip --version)"
+          echo "Working Directory: $(pwd)"
+          echo "Git Ref: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
 
       - name: Install Backend Dependencies
         run: |
