@@ -12,7 +12,7 @@ jobs:
     env:
       PYTHONPATH: backend:.
       APP_ENV: testing
-      DRY_RUN: true
+      DRY_RUN: "true"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -21,8 +21,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
 
       - name: Install Backend Dependencies
         run: |
