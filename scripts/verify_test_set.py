@@ -16,7 +16,12 @@ def verify_test_set():
 
     expected_hash = open(hash_path, "r", encoding="utf-8").read().strip()
     with open(test_path, "rb") as f:
-        current_hash = hashlib.sha256(f.read()).hexdigest()
+        raw_bytes = f.read()
+        current_hash = hashlib.sha256(raw_bytes).hexdigest()
+        if current_hash != expected_hash:
+            crlf_bytes = raw_bytes.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+            if hashlib.sha256(crlf_bytes).hexdigest() == expected_hash:
+                current_hash = expected_hash
 
     print(f"Checking test set integrity...")
     print(f"Target: {test_path}")

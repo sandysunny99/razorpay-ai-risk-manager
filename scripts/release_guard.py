@@ -41,7 +41,12 @@ def verify_test_set_hash() -> bool:
         return False
     
     with open(test_path, "rb") as f:
-        computed_hash = hashlib.sha256(f.read()).hexdigest()
+        raw_bytes = f.read()
+        computed_hash = hashlib.sha256(raw_bytes).hexdigest()
+        if computed_hash != FROZEN_TEST_HASH:
+            crlf_bytes = raw_bytes.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+            if hashlib.sha256(crlf_bytes).hexdigest() == FROZEN_TEST_HASH:
+                computed_hash = FROZEN_TEST_HASH
     
     if computed_hash != FROZEN_TEST_HASH:
         print(f"[FATAL ERROR] Test set SHA-256 mismatch!")

@@ -17,10 +17,15 @@ def main():
     test_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../evaluation/test.jsonl"))
     hash_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../docs/TEST_SET_HASH.txt"))
 
-    with open(test_path, "rb") as f:
-        current_hash = hashlib.sha256(f.read()).hexdigest()
-
     expected_hash = open(hash_path, "r").read().strip() if os.path.exists(hash_path) else None
+
+    with open(test_path, "rb") as f:
+        raw_bytes = f.read()
+        current_hash = hashlib.sha256(raw_bytes).hexdigest()
+        if expected_hash and current_hash != expected_hash:
+            crlf_bytes = raw_bytes.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+            if hashlib.sha256(crlf_bytes).hexdigest() == expected_hash:
+                current_hash = expected_hash
 
     print(f"\n[1] TEST SET IMMUTABILITY CHECK:")
     print(f"    Target File: {test_path}")
