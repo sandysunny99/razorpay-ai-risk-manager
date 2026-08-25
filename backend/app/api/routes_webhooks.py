@@ -25,19 +25,26 @@ async def receive_razorpay_webhook(
     raw_body = await request.body()
     signature = x_razorpay_signature or request.headers.get("x-razorpay-signature") or request.headers.get("X-Razorpay-Signature")
     
-    # 1. Signature Verification
-    if signature:
-        is_valid = RazorpayTestAdapter.verify_webhook_signature(raw_body, signature)
-        if not is_valid:
-            logger.warning("Razorpay webhook signature verification failed!")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid cryptographic webhook signature"
-            )
+    # 1. Mandatory Signature Verification
+    if not signature:
+        logger.warning("Rejecting unsigned Razorpay webhook payload.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing required X-Razorpay-Signature header"
+        )
 
-    # 2. Idempotency Check
+    is_valid = RazorpayTestAdapter.verify_webhook_signature(raw_body, signature)
+    if not is_valid:
+        logger.warning("Razorpay webhook signature verification failed!")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid cryptographic webhook signature"
+        )
+
+    # 2. Idempotency Check (Provider Event ID or deterministic SHA-256 fallback)
+    import hashlib
     event_id = x_razorpay_event_id or request.headers.get("x-razorpay-event-id") or request.headers.get("X-Razorpay-Event-Id")
-    event_key = event_id or str(hash(raw_body))
+    event_key = event_id or hashlib.sha256(raw_body).hexdigest()
     if event_deduplicator.is_duplicate(event_key):
         return {
             "status": "DUPLICATE_IGNORED",
