@@ -98,3 +98,16 @@ class DLPEngine:
         cleaned = PRIVATE_KEY_REGEX.sub("[REDACTED_PRIVATE_KEY]", cleaned)
 
         return cleaned
+
+    @classmethod
+    def sanitize(cls, data: Any) -> Any:
+        """
+        Recursively redacts and sanitizes dictionary, list, or string payloads.
+        """
+        if isinstance(data, dict):
+            return {k: cls.sanitize(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [cls.sanitize(item) for item in data]
+        elif isinstance(data, str):
+            return cls.redact(data)
+        return data

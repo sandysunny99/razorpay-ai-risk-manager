@@ -14,6 +14,8 @@ from app.api.routes_evaluation import router as evaluation_router
 from app.api.routes_exposure import router as exposure_router
 from app.api.routes_security import router as security_router
 from app.api.routes_health import router as health_router
+from app.api.routes_zombie_cards import router as zombie_router
+from app.api.routes_webhooks import router as webhooks_router
 
 # Create Database tables
 Base.metadata.create_all(bind=engine)
@@ -62,6 +64,8 @@ app.include_router(demo_router, prefix=settings.API_V1_STR)
 app.include_router(evaluation_router, prefix=settings.API_V1_STR)
 app.include_router(exposure_router, prefix=settings.API_V1_STR)
 app.include_router(security_router, prefix=settings.API_V1_STR)
+app.include_router(zombie_router)
+app.include_router(webhooks_router)
 
 @app.get("/")
 def root():

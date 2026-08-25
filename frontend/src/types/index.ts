@@ -92,13 +92,86 @@ export interface TokenItem {
 export interface ZombieTokenAlert {
   token_id: string;
   card_id: string;
+  merchant_id?: string;
+  customer_id?: string;
+  masked_pan?: string;
+  card_status?: string;
+  is_card_expired?: boolean;
+  token_status?: string;
+  status?: string;
+  last_used?: string;
+  last_used_at?: string;
+  risk_level?: string;
+  risk_score?: number;
+  reason?: string;
+  created_at?: string;
+}
+
+export interface ZombieCardSummary {
+  card_id: string;
+  card_fingerprint: string;
   masked_pan: string;
-  card_status: string;
-  is_card_expired: boolean;
-  token_status: string;
-  last_used: string;
-  risk_level: string;
-  reason: string;
+  card_state: string;
+  expiration_date?: string;
+  time_since_state_change: string;
+  active_token_count: number;
+  total_token_count: number;
+  zombie_status: 'HEALTHY' | 'AT_RISK' | 'ZOMBIE' | 'CRITICAL' | 'RESOLVED';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  authoritative_risk_score: number;
+  recommended_action: string;
+  affected_merchant_count: number;
+  recurring_subscription_count: number;
+  exposure_detected: boolean;
+}
+
+export interface ZombieStatistics {
+  total_zombie_cards: number;
+  active_zombie_tokens: number;
+  critical_zombies: number;
+  recently_used_zombies: number;
+  exposure_linked_zombies: number;
+  tokens_saved: number;
+  tokens_revoked: number;
+  pending_reviews: number;
+  step_up_challenges: number;
+  verification_success_rate: number;
+}
+
+export interface DependentTokenItem {
+  token_id: string;
+  merchant_id: string;
+  merchant_name: string;
+  status: string;
+  last_used_at?: string;
+  created_at?: string;
+  transaction_count: number;
+  is_recurring: boolean;
+  token_health: string;
+  risk_score: number;
+  recommended_action: string;
+}
+
+export interface ZombieAnalysisResponse {
+  card: ZombieCardSummary;
+  dependent_tokens: DependentTokenItem[];
+  recent_transactions: any[];
+  merchant_impact: {
+    affected_merchant_count: number;
+    affected_merchants: string[];
+    dependent_token_count: number;
+    recurring_subscription_count: number;
+    recent_transaction_volume: number;
+    disruption_risk: string;
+  };
+  customer_impact: {
+    customer_id: string;
+    active_subscriptions: number;
+    payment_friction_level: string;
+    recommended_notification: string;
+  };
+  policy_tier: string;
+  audit_hash: string;
 }
 
 export interface SecurityCase {

@@ -65,7 +65,7 @@ export const ZombieTokenAlerts: React.FC<ZombieTokenAlertsProps> = ({
               <div className="text-[11px] text-slate-400 space-y-0.5">
                 <div>Parent Card: <span className="font-mono text-slate-200">{z.masked_pan}</span> ({z.card_status})</div>
                 <div>Card Expired: <span className="text-rose-400 font-semibold">{z.is_card_expired ? 'YES' : 'NO'}</span></div>
-                <div>Last Token Usage: <span className="text-slate-300">{new Date(z.last_used).toLocaleString()}</span></div>
+                <div>Last Token Usage: <span className="text-slate-300">{z.last_used ? new Date(z.last_used).toLocaleString() : 'N/A'}</span></div>
               </div>
               <p className="text-[11px] text-rose-300/90 mt-2 bg-rose-950/30 p-2 rounded border border-rose-900/50 leading-relaxed">
                 {z.reason}

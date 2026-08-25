@@ -197,5 +197,19 @@ class RazorpayTestAdapter(RazorpayAdapter):
             "message": "Challenge verified." if success else "Challenge failed."
         }
 
+    @classmethod
+    def verify_webhook_signature(cls, raw_body: bytes, signature: str, secret: Optional[str] = None) -> bool:
+        """
+        Verifies Razorpay HMAC-SHA256 signature using raw unparsed request body.
+        Guarantees cryptographic origin verification.
+        """
+        webhook_secret = secret or settings.RAZORPAY_KEY_SECRET or "rzp_test_webhook_secret_fallback"
+        if not signature or not raw_body:
+            return False
+        import hmac, hashlib
+        expected_sig = hmac.new(webhook_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+        return hmac.compare_digest(expected_sig, signature)
+
 # Backwards compatible alias
 RazorpayPaymentAdapter = MockRazorpayAdapter
+razorpay_test_adapter = RazorpayTestAdapter()

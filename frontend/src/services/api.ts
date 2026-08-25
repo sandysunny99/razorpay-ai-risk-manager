@@ -195,4 +195,30 @@ export const api = {
     if (!res.ok) throw new Error('Failed to fetch exposure statistics');
     return res.json();
   },
+
+  async getZombieCards(): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/zombie-cards`);
+    if (!res.ok) throw new Error('Failed to fetch zombie cards');
+    return res.json();
+  },
+
+  async getZombieStatistics(): Promise<any> {
+    const res = await fetch(`${API_BASE}/zombie-cards/statistics`);
+    if (!res.ok) throw new Error('Failed to fetch zombie statistics');
+    return res.json();
+  },
+
+  async getZombieCardAnalysis(cardId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/zombie-cards/${cardId}/analysis`);
+    if (!res.ok) throw new Error(`Failed to fetch analysis for card ${cardId}`);
+    return res.json();
+  },
+
+  async revokeZombieToken(tokenId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/zombie-cards/tokens/${tokenId}/revoke`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error(`Failed to revoke zombie token ${tokenId}`);
+    return res.json();
+  },
 };

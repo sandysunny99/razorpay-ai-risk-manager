@@ -43,6 +43,15 @@ class AgentToolRegistry:
         "verify_and_recalculate": ToolImpact.HIGH_IMPACT,
         "suspend_card": ToolImpact.CRITICAL,
         "transfer_funds": ToolImpact.NEVER_EXECUTE,
+        "check_card_lifecycle": ToolImpact.READ_ONLY,
+        "find_dependent_tokens": ToolImpact.READ_ONLY,
+        "get_token_usage_history": ToolImpact.READ_ONLY,
+        "get_recurring_payment_links": ToolImpact.READ_ONLY,
+        "calculate_merchant_impact": ToolImpact.READ_ONLY,
+        "calculate_customer_impact": ToolImpact.READ_ONLY,
+        "classify_zombie_severity": ToolImpact.READ_ONLY,
+        "recommend_zombie_action": ToolImpact.READ_ONLY,
+        "verify_token_state": ToolImpact.READ_ONLY,
     }
 
     def __init__(
@@ -232,3 +241,88 @@ class AgentToolRegistry:
             verification=verification,
             details=details
         )
+
+    # -------------------------------------------------------------
+    # Zombie Card Saver Specialized Agent Tools
+    # -------------------------------------------------------------
+    async def check_card_lifecycle(self, card_id: str) -> Dict[str, Any]:
+        card = self.db.query(Card).filter(Card.card_id == card_id).first()
+        if not card:
+            return {"status": "NOT_FOUND", "card_id": card_id}
+        return {
+            "card_id": card.card_id,
+            "status": card.status,
+            "expiration_date": card.expiration_date.strftime("%Y-%m-%d") if card.expiration_date else None,
+            "is_expired": (card.status or "").upper() == "EXPIRED"
+        }
+
+    async def find_dependent_tokens(self, card_id: str) -> List[Dict[str, Any]]:
+        tokens = self.db.query(PaymentToken).filter(PaymentToken.card_id == card_id).all()
+        return [
+            {
+                "token_id": t.token_id,
+                "merchant_id": t.merchant_id,
+                "status": t.status,
+                "last_used_at": t.last_used_at.isoformat() if t.last_used_at else None,
+                "is_recurring": getattr(t, "is_recurring", False)
+            } for t in tokens
+        ]
+
+    async def get_token_usage_history(self, token_id: str) -> Dict[str, Any]:
+        txns = self.db.query(Transaction).filter(Transaction.token_id == token_id).all()
+        return {
+            "token_id": token_id,
+            "total_transactions": len(txns),
+            "recent_volume": sum(tx.amount for tx in txns),
+            "successful_count": sum(1 for tx in txns if tx.status == "SUCCESS"),
+            "failed_count": sum(1 for tx in txns if tx.status == "FAILED")
+        }
+
+    async def get_recurring_payment_links(self, card_id: str) -> List[Dict[str, Any]]:
+        tokens = self.db.query(PaymentToken).filter(PaymentToken.card_id == card_id).all()
+        recurring = [t for t in tokens if getattr(t, "is_recurring", False) or "sub" in (t.token_id or "").lower()]
+        return [{"token_id": r.token_id, "merchant_id": r.merchant_id} for r in recurring]
+
+    async def calculate_merchant_impact(self, card_id: str) -> Dict[str, Any]:
+        tokens = self.db.query(PaymentToken).filter(PaymentToken.card_id == card_id).all()
+        merchants = set(t.merchant_id for t in tokens if t.merchant_id)
+        return {
+            "affected_merchants": list(merchants),
+            "affected_merchant_count": len(merchants),
+            "recurring_count": sum(1 for t in tokens if getattr(t, "is_recurring", False))
+        }
+
+    async def calculate_customer_impact(self, card_id: str) -> Dict[str, Any]:
+        card = self.db.query(Card).filter(Card.card_id == card_id).first()
+        return {
+            "customer_id": card.customer_id if card else "unknown",
+            "friction_risk": "MODERATE",
+            "suggested_communication": "Notify cardholder of renewal"
+        }
+
+    async def classify_zombie_severity(self, card_id: str) -> str:
+        card = self.db.query(Card).filter(Card.card_id == card_id).first()
+        tokens = self.db.query(PaymentToken).filter(PaymentToken.card_id == card_id).all()
+        if not card or not tokens:
+            return "LOW"
+        if (card.status or "").upper() in {"BLOCKED", "COMPROMISED"}:
+            return "CRITICAL"
+        if (card.status or "").upper() == "EXPIRED" and any(t.status == "ACTIVE" for t in tokens):
+            return "HIGH"
+        return "MEDIUM"
+
+    async def recommend_zombie_action(self, token_id: str, is_recurring: bool, risk_score: float) -> str:
+        if risk_score >= 75.0:
+            return "REVOKE_TOKEN"
+        if is_recurring:
+            return "REVIEW"
+        if risk_score >= 40.0:
+            return "REQUEST_STEP_UP"
+        return "MONITOR"
+
+    async def verify_token_state(self, token_id: str) -> Dict[str, Any]:
+        token = self.db.query(PaymentToken).filter(PaymentToken.token_id == token_id).first()
+        return {
+            "token_id": token_id,
+            "current_status": token.status if token else "NOT_FOUND"
+        }
