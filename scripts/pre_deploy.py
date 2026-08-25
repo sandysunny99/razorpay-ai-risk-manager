@@ -39,7 +39,7 @@ def main():
 
     checks = [
         ("Test Set Hash Immutability", [sys.executable, "scripts/verify_test_set.py"], "."),
-        ("Backend Automated Test Suite (54 Tests)", ["pytest", "-q"], "."),
+        ("Backend Automated Test Suite", ["pytest", "-q"], "."),
         ("Final Evaluation Benchmark", [sys.executable, "scripts/run_final_evaluation.py"], "."),
         ("Release Guard Enforcement", [sys.executable, "scripts/release_guard.py"], "."),
         ("Cloudflare Edge Verification", [sys.executable, "scripts/verify_cloudflare_security.py"], "."),

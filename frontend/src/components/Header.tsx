@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isLoading, systemStat
                 RAZORPAY <span className="text-blue-400 font-semibold">AI RISK MANAGER</span>
               </h1>
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                v2.0.0-rc1
+                v2.0.0-rc2
               </span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
                 DEMO / TEST MODE

@@ -5,7 +5,7 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm install --no-audit
+RUN npm install --no-audit --legacy-peer-deps
 
 COPY frontend/ ./
 RUN npm run build

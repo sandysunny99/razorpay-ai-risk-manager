@@ -27,7 +27,7 @@ with SessionLocal() as db:
 app = FastAPI(
     title=settings.APP_NAME,
     description="Agentic security layer for payment risk, card exposure, token protection, and controlled remediation.",
-    version="2.0.0-rc1",
+    version="2.0.0-rc2",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -67,12 +67,26 @@ app.include_router(security_router, prefix=settings.API_V1_STR)
 app.include_router(zombie_router)
 app.include_router(webhooks_router)
 
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+frontend_dist = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
+if not os.path.exists(frontend_dist):
+    frontend_dist = "/app/frontend/dist"
+
+if os.path.exists(frontend_dist) and os.path.exists(os.path.join(frontend_dist, "assets")):
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+
 @app.get("/")
 def root():
+    index_path = os.path.join(frontend_dist, "index.html") if os.path.exists(frontend_dist) else None
+    if index_path and os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
         "service": settings.APP_NAME,
         "status": "ONLINE",
-        "version": "2.0.0-rc1",
+        "version": "2.0.0-rc2",
         "docs": "/docs",
         "dry_run": settings.DRY_RUN
     }
