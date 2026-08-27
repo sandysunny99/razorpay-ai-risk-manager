@@ -1,18 +1,24 @@
 import React from 'react';
-import { CreditCard, Search, AlertCircle, ShieldAlert, KeyRound, ExternalLink } from 'lucide-react';
+import { CreditCard, Search, ShieldAlert } from 'lucide-react';
+import { TableSkeleton } from './Skeleton';
 import { CardItem } from '../types';
 
 interface CardRiskTableProps {
   cards: CardItem[];
   onInvestigateCard: (cardId: string) => void;
   isInvestigating?: boolean;
+  isLoading?: boolean;
 }
 
 export const CardRiskTable: React.FC<CardRiskTableProps> = ({
   cards,
   onInvestigateCard,
   isInvestigating,
+  isLoading,
 }) => {
+  if (isLoading) {
+    return <TableSkeleton rows={6} />;
+  }
   const getRiskBadge = (score: number) => {
     if (score >= 75) {
       return (

@@ -20,6 +20,7 @@ export interface Toast {
 export interface UseToastResult {
   toasts: Toast[];
   showToast: (type: ToastType, title: string, message?: string) => void;
+  addToast: (toast: { type: ToastType; title: string; message?: string; autoDismiss?: boolean; duration?: number }) => void;
   dismissToast: (id: string) => void;
 }
 
@@ -66,5 +67,29 @@ export function useToast(): UseToastResult {
     [dismissToast],
   );
 
-  return { toasts, showToast, dismissToast };
+  const addToast = useCallback(
+    (opts: { type: ToastType; title: string; message?: string; autoDismiss?: boolean; duration?: number }) => {
+      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const autoDismissMs = opts.duration !== undefined
+        ? opts.duration
+        : (opts.autoDismiss === false ? null : AUTO_DISMISS_MS[opts.type]);
+      const toast: Toast = {
+        id,
+        type: opts.type,
+        title: opts.title,
+        message: opts.message,
+        autoDismiss: autoDismissMs !== null,
+      };
+
+      setToasts((prev) => [toast, ...prev].slice(0, 8));
+
+      if (autoDismissMs !== null) {
+        const timer = setTimeout(() => dismissToast(id), autoDismissMs);
+        timersRef.current.set(id, timer);
+      }
+    },
+    [dismissToast],
+  );
+
+  return { toasts, showToast, addToast, dismissToast };
 }

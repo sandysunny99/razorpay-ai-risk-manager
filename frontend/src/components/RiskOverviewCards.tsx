@@ -1,5 +1,6 @@
 import React from 'react';
-import { CreditCard, KeyRound, Skull, AlertOctagon, ShieldAlert, FolderKanban } from 'lucide-react';
+import CountUp from 'react-countup';
+import { CreditCard, KeyRound, Skull, AlertOctagon, ShieldAlert, FolderKanban, ShieldCheck } from 'lucide-react';
 import { OverviewMetrics } from '../types';
 
 interface RiskOverviewCardsProps {
@@ -12,50 +13,56 @@ export const RiskOverviewCards: React.FC<RiskOverviewCardsProps> = ({ metrics })
       title: 'Cards Monitored',
       value: metrics?.cards_monitored ?? 0,
       icon: CreditCard,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-500/10 border-blue-500/20',
-      subtitle: 'HMAC-SHA-256 Protected',
+      borderAccent: 'border-l-blue-500',
+      iconColor: 'text-blue-400',
+      badgeColor: 'bg-blue-500/10 text-blue-300',
+      subtitle: 'HMAC-SHA-256 Fingerprinted',
     },
     {
       title: 'Tokens Monitored',
       value: metrics?.tokens_monitored ?? 0,
       icon: KeyRound,
-      color: 'text-indigo-400',
-      bgColor: 'bg-indigo-500/10 border-indigo-500/20',
+      borderAccent: 'border-l-indigo-500',
+      iconColor: 'text-indigo-400',
+      badgeColor: 'bg-indigo-500/10 text-indigo-300',
       subtitle: 'Vault Managed Tokens',
     },
     {
       title: 'Active Zombie Tokens',
       value: metrics?.active_zombie_tokens ?? 0,
       icon: Skull,
-      color: 'text-rose-400',
-      bgColor: 'bg-rose-500/10 border-rose-500/30 ring-1 ring-rose-500/20',
-      subtitle: 'Active Tokens on Dead Cards',
-      alert: true,
+      borderAccent: 'border-l-rose-500',
+      iconColor: 'text-rose-400',
+      badgeColor: 'bg-rose-500/10 text-rose-300',
+      subtitle: 'Tokens on Dead Cards',
+      alert: (metrics?.active_zombie_tokens ?? 0) > 0,
     },
     {
       title: 'Exposure Events',
       value: metrics?.exposure_events_count ?? 0,
       icon: AlertOctagon,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10 border-amber-500/20',
+      borderAccent: 'border-l-amber-500',
+      iconColor: 'text-amber-400',
+      badgeColor: 'bg-amber-500/10 text-amber-300',
       subtitle: 'Stealer Logs & Paste Matches',
     },
     {
       title: 'Critical Incidents',
       value: metrics?.critical_incidents ?? 0,
       icon: ShieldAlert,
-      color: 'text-red-400',
-      bgColor: 'bg-red-500/10 border-red-500/20',
-      subtitle: 'Remediation Required',
+      borderAccent: 'border-l-red-500',
+      iconColor: 'text-red-400',
+      badgeColor: 'bg-red-500/10 text-red-300',
+      subtitle: 'Immediate Remediation Tier',
     },
     {
       title: 'Open Security Cases',
       value: metrics?.open_cases_count ?? 0,
       icon: FolderKanban,
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-500/10 border-purple-500/20',
-      subtitle: 'SOC Automated Tracking',
+      borderAccent: 'border-l-purple-500',
+      iconColor: 'text-purple-400',
+      badgeColor: 'bg-purple-500/10 text-purple-300',
+      subtitle: 'Automated SOC Tracking',
     },
   ];
 
@@ -66,14 +73,25 @@ export const RiskOverviewCards: React.FC<RiskOverviewCardsProps> = ({ metrics })
         return (
           <div
             key={idx}
-            className={`p-4 rounded-xl border ${card.bgColor} backdrop-blur-sm transition-all hover:translate-y-[-2px] hover:shadow-lg`}
+            className={`p-4 rounded-xl border border-slate-800/80 border-l-4 ${card.borderAccent} bg-slate-900/60 backdrop-blur-md transition-all duration-200 hover:translate-y-[-2px] hover:shadow-lg hover:border-slate-700`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-400">{card.title}</span>
-              <Icon className={`w-5 h-5 ${card.color} ${card.alert ? 'animate-bounce' : ''}`} />
+              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                {card.title}
+              </span>
+              <Icon className={`w-4 h-4 ${card.iconColor} ${card.alert ? 'animate-pulse' : ''}`} />
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{card.value}</div>
-            <p className="text-[11px] text-slate-400 mt-1 truncate">{card.subtitle}</p>
+            <div className="text-2xl font-bold font-mono text-white tracking-tight">
+              <CountUp end={card.value} duration={0.8} />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+              <span className="truncate">{card.subtitle}</span>
+              {card.alert && (
+                <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                  CRITICAL
+                </span>
+              )}
+            </div>
           </div>
         );
       })}

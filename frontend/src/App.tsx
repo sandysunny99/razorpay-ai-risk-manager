@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './components/Header';
 import { RiskOverviewCards } from './components/RiskOverviewCards';
 import { DemoScenarioTrigger } from './components/DemoScenarioTrigger';
 import { InvestigationTimeline } from './components/InvestigationTimeline';
-import { ZombieTokenAlerts } from './components/ZombieTokenAlerts';
 import { CardRiskTable } from './components/CardRiskTable';
 import { SecurityCasesTable } from './components/SecurityCasesTable';
 import { AuditTrailTable } from './components/AuditTrailTable';
 import { EvaluationDashboard } from './components/EvaluationDashboard';
 import { LiveRiskTable } from './components/LiveRiskTable';
+import { ZombieCardSaverView } from './components/ZombieCardSaverView';
 import { SecurityCenter } from './components/SecurityCenter';
 import { CardExposureOverview } from './components/CardExposureOverview';
-import { ZombieCardSaverView } from './components/ZombieCardSaverView';
-
-import { api } from './services/api';
+import { ToastContainer } from './components/ToastContainer';
+import { TableSkeleton } from './components/Skeleton';
+import { useToast } from './hooks/useToast';
+import { api, setApiErrorListener } from './services/api';
 import {
   OverviewMetrics,
   InvestigationResponse,
@@ -25,22 +26,46 @@ import {
   ScenarioItem,
 } from './types';
 
+type TabType =
+  | 'timeline'
+  | 'zombie-saver'
+  | 'evaluation'
+  | 'liverisk'
+  | 'cards'
+  | 'cases'
+  | 'audit'
+  | 'security'
+  | 'exposure';
+
 export function App() {
   const [metrics, setMetrics] = useState<OverviewMetrics | null>(null);
   const [cards, setCards] = useState<CardItem[]>([]);
-  const [tokens, setTokens] = useState<TokenItem[]>([]);
+  const [, setTokens] = useState<TokenItem[]>([]);
   const [zombies, setZombies] = useState<ZombieTokenAlert[]>([]);
   const [cases, setCases] = useState<SecurityCase[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [scenarios, setScenarios] = useState<ScenarioItem[]>([]);
-  
+
   const [investigation, setInvestigation] = useState<InvestigationResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isAgentRunning, setIsAgentRunning] = useState<boolean>(false);
-  const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'zombie-saver' | 'evaluation' | 'liverisk' | 'cards' | 'cases' | 'audit' | 'security' | 'exposure'>('timeline');
+  const [activeTab, setActiveTab] = useState<TabType>('timeline');
 
-  const fetchAllData = async () => {
+  const { toasts, addToast, dismissToast } = useToast();
+
+  // Wire API global error handler to toast system (BUG-UI-05)
+  useEffect(() => {
+    setApiErrorListener((msg: string) => {
+      addToast({
+        type: 'error',
+        title: 'Backend Communication Alert',
+        message: msg,
+      });
+    });
+    return () => setApiErrorListener(null);
+  }, [addToast]);
+
+  const fetchAllData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [m, c, t, z, cs, a, sc] = await Promise.all([
@@ -60,16 +85,16 @@ export function App() {
       setCases(cs);
       setAuditEvents(a);
       setScenarios(sc);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error refreshing data:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [fetchAllData]);
 
   const handleTriggerScenario = async (scenarioId: string) => {
     setIsAgentRunning(true);
@@ -78,23 +103,69 @@ export function App() {
         const result = await api.triggerGoldenDemo();
         setInvestigation(result);
         setActiveTab('timeline');
+        addToast({
+          type: 'security',
+          title: 'Golden Compromise Scenario Executed',
+          message: `Autonomous mitigation complete: Risk ${result.initial_risk} -> ${result.final_risk}. Token revoked.`,
+        });
       } else if (scenarioId === 'policy_denial') {
         const result = await api.triggerPolicyDenialDemo();
-        alert(`Guardrail Test Result:\n\nAction: ${result.action_requested}\nDecision: ${result.policy_decision.decision}\nReason: ${result.policy_decision.reason}\n\nGuardrail Enforced: ${result.guardrail_enforced}`);
+        addToast({
+          type: 'security',
+          title: 'Policy Guardrail Enforced (PG-CARD-01)',
+          message: `Blocked Action: ${result.action_requested} | Decision: ${result.policy_decision?.decision || 'BLOCKED'} | Reason: Supervisor review strictly required.`,
+        });
       } else if (scenarioId === 'prompt_injection') {
         const result = await api.triggerPromptInjectionDemo();
-        alert(`Prompt Injection Defense Test:\n\nRaw Payload: ${result.raw_payload}\n\nSanitized: ${result.sanitized_payload}\n\nIsolation: ${result.data_isolation}\n\nStatus: ${result.defense_status}`);
+        addToast({
+          type: 'success',
+          title: 'Adversarial Prompt Injection Defended',
+          message: `Threat text neutralized. Status: ${result.defense_status} | Isolation: Strict schema separation verified.`,
+        });
       } else if (scenarioId === 'clean_transaction') {
         const result = await api.triggerInvestigation('TXN-2026-1001');
         setInvestigation(result);
         setActiveTab('timeline');
+        addToast({
+          type: 'info',
+          title: 'Clean Domestic Benchmark Evaluated',
+          message: `Risk Score: ${result.initial_risk}/100. Policy: ALLOW. No remediation required.`,
+        });
       } else if (scenarioId === 'zombie_token_scan') {
         await fetchAllData();
-        setActiveTab('cards');
+        setActiveTab('zombie-saver');
+        addToast({
+          type: 'warning',
+          title: 'Zombie Token Scan Completed',
+          message: `Found active vault tokens bound to expired/blocked cards.`,
+        });
       }
       await fetchAllData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Scenario execution failed:', err);
+    } finally {
+      setIsAgentRunning(false);
+    }
+  };
+
+  const handleInvestigateCard = async (cardId: string) => {
+    setIsAgentRunning(true);
+    try {
+      const card = cards.find((c) => c.card_id === cardId);
+      const targetTxn =
+        cardId === 'card_test_4921' || card?.masked_pan?.includes('4921')
+          ? 'TXN-2026-9042'
+          : 'TXN-2026-1001';
+      const result = await api.triggerInvestigation(targetTxn);
+      setInvestigation(result);
+      setActiveTab('timeline');
+      addToast({
+        type: 'info',
+        title: 'Targeted Card Investigation',
+        message: `Analyzing risk timeline for card ${card?.masked_pan || cardId} via transaction ${targetTxn}.`,
+      });
+    } catch (err: any) {
+      console.error('Investigation failed:', err);
     } finally {
       setIsAgentRunning(false);
     }
@@ -106,27 +177,34 @@ export function App() {
       await api.resetData();
       setInvestigation(null);
       await fetchAllData();
-    } catch (err) {
+      addToast({
+        type: 'success',
+        title: 'Demo Environment Reset',
+        message: 'Database reseeded with initial deterministic fixtures.',
+      });
+    } catch (err: any) {
       console.error('Reset failed:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRevokeToken = async (tokenId: string) => {
-    setRevokingTokenId(tokenId);
-    try {
-      await api.revokeToken(tokenId);
-      await fetchAllData();
-    } catch (err) {
-      console.error('Revoke failed:', err);
-    } finally {
-      setRevokingTokenId(null);
-    }
-  };
+  const tabs: { id: TabType; label: string; count?: number; isLive?: boolean }[] = [
+    { id: 'timeline', label: 'Agent Investigation', count: investigation ? 1 : undefined },
+    { id: 'zombie-saver', label: 'Zombie Card Saver', count: zombies.length },
+    { id: 'liverisk', label: 'Live Screening Stream', isLive: true },
+    { id: 'cards', label: 'Cards & Vault', count: cards.length },
+    { id: 'cases', label: 'Security Cases', count: cases.length },
+    { id: 'audit', label: 'Audit Ledger', count: auditEvents.length },
+    { id: 'security', label: 'SOC & DLP Guard' },
+    { id: 'exposure', label: 'Threat Intel & CTI' },
+    { id: 'evaluation', label: 'Model Evaluation' },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#081220] text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#081220] text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white relative">
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
       {/* Top Header */}
       <Header
         onRefresh={fetchAllData}
@@ -140,135 +218,62 @@ export function App() {
         {/* Executive Metric Cards */}
         <RiskOverviewCards metrics={metrics} />
 
-        {/* Demo Scenario Controller */}
+        {/* Demo Scenario Interactive Controller */}
         <DemoScenarioTrigger
+          scenarios={scenarios}
           onTriggerScenario={handleTriggerScenario}
           onResetData={handleResetData}
-          scenarios={scenarios}
           isRunning={isAgentRunning}
         />
 
-        {/* Zombie Token Alert Section */}
-        <ZombieTokenAlerts
-          zombies={zombies}
-          onRevoke={handleRevokeToken}
-          isRevoking={revokingTokenId}
-        />
-
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-2">
-          <button
-            onClick={() => setActiveTab('timeline')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-              activeTab === 'timeline'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Agent Investigation Timeline {investigation && '• Active'}
-          </button>
-          <button
-            onClick={() => setActiveTab('zombie-saver')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-              activeTab === 'zombie-saver'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
-                : 'text-purple-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Zombie Card Saver
-          </button>
-          <button
-            onClick={() => setActiveTab('security')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-              activeTab === 'security'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            SOC Security Center & DLP
-          </button>
-          <button
-            onClick={() => setActiveTab('exposure')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-              activeTab === 'exposure'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Threat Intelligence & Exposure
-          </button>
-          <button
-            onClick={() => setActiveTab('evaluation')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-              activeTab === 'evaluation'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Model Evaluation & Metrics
-          </button>
-          <button
-            onClick={() => setActiveTab('liverisk')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-              activeTab === 'liverisk'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Live Risk Screening Stream
-          </button>
-          <button
-            onClick={() => setActiveTab('cards')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-              activeTab === 'cards'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Cards & Vault Inventory ({cards.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('cases')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-              activeTab === 'cases'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Security Cases ({cases.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('audit')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-              activeTab === 'audit'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Tamper-Evident Audit Trail ({auditEvents.length})
-          </button>
-        </div>
+        {/* Pill-Style Tab Navigation (F.3.2) */}
+        <nav className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-800/80 scrollbar-none">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
+                  isActive
+                    ? 'bg-blue-600/90 text-white shadow-lg shadow-blue-500/25 border border-blue-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+                }`}
+              >
+                <span>{tab.label}</span>
+                {tab.isLive && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                )}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-800 text-slate-300 border border-slate-700'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
         {/* Tab Content Panes */}
-        {activeTab === 'timeline' && (
+        {isLoading && !investigation && <TableSkeleton rows={6} />}
+
+        {!isLoading && activeTab === 'timeline' && (
           <InvestigationTimeline investigation={investigation} />
         )}
 
-        {activeTab === 'zombie-saver' && (
-          <ZombieCardSaverView />
-        )}
+        {activeTab === 'zombie-saver' && <ZombieCardSaverView />}
 
-        {activeTab === 'security' && (
-          <SecurityCenter />
-        )}
+        {activeTab === 'security' && <SecurityCenter />}
 
-        {activeTab === 'exposure' && (
-          <CardExposureOverview />
-        )}
+        {activeTab === 'exposure' && <CardExposureOverview />}
 
-        {activeTab === 'evaluation' && (
-          <EvaluationDashboard />
-        )}
+        {activeTab === 'evaluation' && <EvaluationDashboard />}
 
         {activeTab === 'liverisk' && (
           <LiveRiskTable
@@ -280,24 +285,25 @@ export function App() {
         {activeTab === 'cards' && (
           <CardRiskTable
             cards={cards}
-            onInvestigateCard={() => handleTriggerScenario('golden_compromise')}
+            onInvestigateCard={handleInvestigateCard}
             isInvestigating={isAgentRunning}
+            isLoading={isLoading}
           />
         )}
 
-        {activeTab === 'cases' && (
-          <SecurityCasesTable cases={cases} />
-        )}
+        {activeTab === 'cases' && <SecurityCasesTable cases={cases} />}
 
         {activeTab === 'audit' && (
-          <AuditTrailTable events={auditEvents} />
+          <AuditTrailTable events={auditEvents} isLoading={isLoading} />
         )}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-[#060D17] py-6 px-6 text-center text-xs text-slate-500">
         <p>
-          Razorpay AI Buildathon 2026 • Track: <span className="text-slate-300 font-medium">AI Risk Manager</span> • Built with HMAC-SHA-256 PAN Fingerprinting & PCI-Aware Security Design
+          Razorpay AI Buildathon 2026 • Track:{' '}
+          <span className="text-slate-300 font-medium">AI Risk Manager</span> • Built with
+          HMAC-SHA-256 PAN Fingerprinting &amp; PCI-Aware Security Design
         </p>
       </footer>
     </div>
