@@ -28,21 +28,22 @@ class Settings(BaseSettings):
     # In production, always set this via Render secret env var.
     # ----------------------------------------------------------------
     HMAC_SECRET_KEY: str = ""
+    _ephemeral_secret: str | None = None
 
     @property
     def hmac_secret_resolved(self) -> str:
         if self.HMAC_SECRET_KEY:
             return self.HMAC_SECRET_KEY
-        # For CI / local dev without an env file, generate an ephemeral key
-        # and warn. This is intentionally NOT a stable default string.
-        import warnings
+        if self._ephemeral_secret is not None:
+            return self._ephemeral_secret
+        import warnings, secrets
         warnings.warn(
-            "HMAC_SECRET_KEY not set — using ephemeral random key. "
-            "Set HMAC_SECRET_KEY env var for stable production operation.",
+            "HMAC_SECRET_KEY not set — using ephemeral random key. Set HMAC_SECRET_KEY env var for stable production operation.",
             RuntimeWarning,
             stacklevel=2,
         )
-        return secrets.token_hex(32)
+        self._ephemeral_secret = secrets.token_hex(32)
+        return self._ephemeral_secret
 
     # ----------------------------------------------------------------
     # API Auth Key — Phase 3
