@@ -14,27 +14,164 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate-and-build:
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 1: Static Analysis, Linting & Type Checking
+  # ─────────────────────────────────────────────────────────────────────────
+  static-analysis:
+    name: Static Analysis & Linting
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: backend:.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Analysis Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install ruff bandit mypy
+
+      - name: Ruff Linting (Python)
+        run: ruff check backend/ scripts/ --select=E,W,F,I,S --ignore=S101,S106
+
+      - name: Bandit SAST — Security Analysis
+        run: |
+          bandit -r backend/app/ \
+            -ll \
+            --skip B101,B311 \
+            -f json \
+            -o bandit_report.json || true
+          # Fail if HIGH severity issues found
+          python -c "
+          import json, sys
+          with open('bandit_report.json') as f:
+              report = json.load(f)
+          highs = [i for i in report.get('results', []) if i['issue_severity'] == 'HIGH']
+          if highs:
+              for h in highs:
+                  print(f'HIGH: {h[\"issue_text\"]} @ {h[\"filename\"]}:{h[\"line_number\"]}')
+              sys.exit(1)
+          print(f'Bandit: 0 HIGH issues found.')
+          "
+
+      - name: MyPy Type Checking (Backend)
+        run: |
+          mypy backend/app/ \
+            --ignore-missing-imports \
+            --no-strict-optional \
+            --python-version 3.12 \
+            || true  # Advisory in this release; make mandatory after full typing
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 2: Security & Cryptographic Test Suite (Parallel)
+  # ─────────────────────────────────────────────────────────────────────────
+  test-security:
+    name: Security & Crypto Tests
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: backend:.
       APP_ENV: testing
       DRY_RUN: "true"
+      HMAC_SECRET_KEY: "ci_test_hmac_secret_key_only_for_testing_2026"
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Run Security Test Suite
+        run: |
+          pytest -q \
+            backend/tests/test_security.py \
+            backend/tests/test_webapp_security.py \
+            backend/tests/test_adversarial_threat.py \
+            backend/tests/test_multi_tenancy.py \
+            backend/tests/test_enrichment_and_webhooks.py \
+            --tb=short
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 3: Engine & Policy Tests (Parallel)
+  # ─────────────────────────────────────────────────────────────────────────
+  test-engines:
+    name: Engine & Policy Tests
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: backend:.
+      APP_ENV: testing
+      DRY_RUN: "true"
+      HMAC_SECRET_KEY: "ci_test_hmac_secret_key_only_for_testing_2026"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Run Engine Test Suite
+        run: |
+          pytest -q \
+            backend/tests/test_risk_engines.py \
+            backend/tests/test_policy.py \
+            backend/tests/test_tiered_response.py \
+            backend/tests/test_two_layer_metrics.py \
+            --tb=short
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 4: Integration & E2E Tests (Parallel)
+  # ─────────────────────────────────────────────────────────────────────────
+  test-integration:
+    name: Integration & E2E Tests
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: backend:.
+      APP_ENV: testing
+      DRY_RUN: "true"
+      HMAC_SECRET_KEY: "ci_test_hmac_secret_key_only_for_testing_2026"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Run Integration Test Suite
+        run: |
+          pytest -q \
+            backend/tests/test_agent_benchmark.py \
+            backend/tests/test_e2e_agent.py \
+            backend/tests/test_zombie_card_saver.py \
+            backend/tests/test_audit_chain.py \
+            backend/tests/test_evaluation_metrics.py \
+            --tb=short
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 5: Evaluation & Release Gates (Sequential — needs all tests to pass)
+  # ─────────────────────────────────────────────────────────────────────────
+  validate-and-build:
+    name: Validate, Evaluate & Build
+    runs-on: ubuntu-latest
+    needs: [static-analysis, test-security, test-engines, test-integration]
+    env:
+      PYTHONPATH: backend:.
+      APP_ENV: testing
+      DRY_RUN: "true"
+      HMAC_SECRET_KEY: "ci_test_hmac_secret_key_only_for_testing_2026"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Environment Diagnostics
         run: |
-          echo "Operating System: $(uname -a)"
+          echo "OS: $(uname -a)"
           echo "Python: $(python --version)"
-          echo "Pip: $(pip --version)"
-          echo "Working Directory: $(pwd)"
           echo "Git Ref: ${{ github.ref }}"
           echo "Commit: ${{ github.sha }}"
 
@@ -46,8 +183,8 @@ jobs:
       - name: 1. Test Set Hash Immutability Gate
         run: python scripts/verify_test_set.py
 
-      - name: 2. Automated Backend Pytest Suite
-        run: pytest -q
+      - name: 2. Full Pytest Suite (Regression Check)
+        run: pytest -q --tb=short
 
       - name: 3. Reproducible Final Evaluation Benchmark
         run: python scripts/run_final_evaluation.py
@@ -61,16 +198,44 @@ jobs:
       - name: 6. Data Security & DLP Verification Gate
         run: python scripts/verify_data_security.py
 
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: 7. Frontend Production Bundle Build
+      - name: 7a. Frontend TypeScript Strict Mode Check
         working-directory: ./frontend
         run: |
           npm install --legacy-peer-deps
-          npm run build
+          npx tsc --noEmit
+
+      - name: 7b. Frontend Production Bundle Build
+        working-directory: ./frontend
+        run: npm run build
 
       - name: 8. Docker Multi-Stage Image Build
-        run: docker build -t razorpay-ai-risk-manager .
+        run: docker build -t razorpay-ai-risk-manager:${{ github.sha }} .
+
+      - name: 9. Docker Image CVE Scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'razorpay-ai-risk-manager:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL'
+          ignore-unfixed: true
+
+      - name: 10. Tag Image as Latest (main branch only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          docker tag razorpay-ai-risk-manager:${{ github.sha }} razorpay-ai-risk-manager:latest
+          echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: 11. Create GitHub Release (main branch, on tag)
+        if: github.ref == 'refs/heads/main' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            evaluation/final_evaluation_report.json
+            docs/FINAL_PUBLIC_DEPLOYMENT_EVIDENCE.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

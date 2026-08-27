@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from app.models.entities import (
     Customer, Card, PaymentToken, Transaction, ThreatSource,
@@ -97,7 +97,7 @@ def seed_initial_data(db: Session):
         status="ACTIVE",
         token_age_days=18,
         usage_count=12,
-        last_used_at=datetime.utcnow()
+        last_used_at=datetime.now(timezone.utc)
     )
     # ZOMBIE TOKEN: ACTIVE on EXPIRED card
     tok_zombie = PaymentToken(
@@ -108,7 +108,7 @@ def seed_initial_data(db: Session):
         status="ACTIVE",
         token_age_days=450,
         usage_count=84,
-        last_used_at=datetime.utcnow() - timedelta(hours=2)
+        last_used_at=datetime.now(timezone.utc) - timedelta(hours=2)
     )
     tok_clean = PaymentToken(
         token_id="tok_clean_456",
@@ -118,7 +118,7 @@ def seed_initial_data(db: Session):
         status="ACTIVE",
         token_age_days=5,
         usage_count=2,
-        last_used_at=datetime.utcnow()
+        last_used_at=datetime.now(timezone.utc)
     )
     db.add_all([tok1, tok_zombie, tok_clean])
     db.commit()
@@ -164,7 +164,7 @@ def seed_initial_data(db: Session):
         source_name="RedLine_Stealer_DarkWeb_Forum",
         exposure_type="stealer_log",
         confidence_score=0.96,
-        leak_date=datetime.utcnow() - timedelta(days=2),
+        leak_date=datetime.now(timezone.utc) - timedelta(days=2),
         raw_metadata={"bot_net": "RedLine_v24", "origin_country": "RU"}
     )
     exp2 = ExposureEvent(
@@ -173,7 +173,7 @@ def seed_initial_data(db: Session):
         source_name="Pastebin_Breach_Leak",
         exposure_type="paste_leak",
         confidence_score=0.74,
-        leak_date=datetime.utcnow() - timedelta(days=7),
+        leak_date=datetime.now(timezone.utc) - timedelta(days=7),
         raw_metadata={"paste_id": "paste_8820_dump"}
     )
     db.add_all([exp1, exp2])

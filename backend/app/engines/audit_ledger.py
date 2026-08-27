@@ -1,7 +1,7 @@
 import hashlib
 import json
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.entities import AuditEvent
 
@@ -93,7 +93,7 @@ class AuditLedgerEngine:
             previous_hash=prev_hash,
             current_hash=curr_hash,
             details=details,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         db.add(event)
         db.commit()

@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 
 class EventType(str, Enum):
     # Payment events
@@ -49,7 +49,7 @@ class SecurityEvent(BaseModel):
     event_id: str
     event_type: EventType
     source: str = Field(default="INTERNAL", description="Source system: RAZORPAY_TEST, CLOUDFLARE, CTI, INTERNAL")
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     merchant_id: Optional[str] = None
     customer_id: Optional[str] = None
     card_fingerprint: Optional[str] = None

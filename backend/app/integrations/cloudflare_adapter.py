@@ -1,6 +1,6 @@
 import uuid
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from app.security.dlp import DLPEngine
 from app.security.masking import mask_cloudflare_ray_id, mask_ip
 
@@ -46,7 +46,7 @@ class CloudflareAdapter:
             "event_id": f"CF-EVT-{uuid.uuid4().hex[:8].upper()}",
             "ray_id": raw_ray_id,
             "masked_ray_id": mask_cloudflare_ray_id(raw_ray_id),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event_type": event_type,
             "tenant_id": tenant_id,
             "origin_ip": connecting_ip,

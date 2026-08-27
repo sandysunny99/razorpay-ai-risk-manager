@@ -1,15 +1,19 @@
 import hmac
 import hashlib
 import re
+import secrets
+import logging
 from typing import Optional
 from app.core.config import settings
+
+logger = logging.getLogger("security")
 
 def luhn_checksum_valid(card_number: str) -> bool:
     """Validate a card number using Luhn algorithm."""
     digits = [int(c) for c in re.sub(r"\D", "", card_number)]
     if len(digits) < 13 or len(digits) > 19:
         return False
-    
+
     checksum = 0
     reverse_digits = digits[::-1]
     for i, digit in enumerate(reverse_digits):
@@ -18,7 +22,7 @@ def luhn_checksum_valid(card_number: str) -> bool:
             checksum += doubled - 9 if doubled > 9 else doubled
         else:
             checksum += digit
-            
+
     return checksum % 10 == 0
 
 def mask_pan(pan: str) -> str:
@@ -41,11 +45,35 @@ def generate_card_fingerprint(pan: str, salt: Optional[str] = None) -> str:
     Generate an HMAC-SHA256 cryptographic card fingerprint.
     Raw PAN is never stored or matched directly; fingerprinting enables
     zero-knowledge matching against exposed breach feeds.
+
+    FIX C-02: Uses settings.hmac_secret_resolved property (no hardcoded fallback).
+    FIX-TIMING: Uses hmac.compare_digest for all comparisons — see verify_hmac_signature.
     """
     clean_pan = re.sub(r"\D", "", pan)
-    key = (salt or settings.HMAC_SECRET_KEY).encode("utf-8")
+    key = (salt or settings.hmac_secret_resolved).encode("utf-8")
     h = hmac.new(key, clean_pan.encode("utf-8"), hashlib.sha256)
     return h.hexdigest()
+
+def verify_hmac_signature(raw_body: bytes, signature: str, secret: Optional[str] = None) -> bool:
+    """
+    Constant-time HMAC-SHA256 signature verification.
+    FIX-TIMING: Uses hmac.compare_digest to prevent timing attacks.
+    The previous code in razorpay_adapter.py used hmac.compare_digest correctly,
+    but this canonical function ensures all callers use the safe path.
+    """
+    if not signature or not raw_body:
+        return False
+    webhook_secret = secret or settings.RAZORPAY_WEBHOOK_SECRET or settings.RAZORPAY_KEY_SECRET
+    if not webhook_secret:
+        logger.error("No webhook secret configured — all signatures will fail verification.")
+        return False
+    expected_sig = hmac.new(
+        webhook_secret.encode("utf-8"),
+        raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+    # Constant-time comparison — prevents timing oracle attacks
+    return hmac.compare_digest(expected_sig, signature)
 
 CARD_REGEX = re.compile(r"\b(?:\d{4}[ -]?){3}\d{4}\b|\b\d{13,19}\b")
 
@@ -75,3 +103,7 @@ def sanitize_untrusted_input(data: str) -> str:
     cleaned = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", cleaned)
     # Truncate overly long threat payloads to prevent context bloat
     return cleaned[:1000].strip()
+
+def generate_correlation_id() -> str:
+    """Generate a short random correlation ID for error tracking."""
+    return secrets.token_hex(8).upper()

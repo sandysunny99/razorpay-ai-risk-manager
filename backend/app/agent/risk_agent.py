@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
@@ -44,7 +44,7 @@ class RiskManagerAgent:
         tools_skipped: List[str] = []
         tool_audit: List[ToolAuditItem] = []
 
-        now_str = lambda: datetime.utcnow().strftime("%H:%M:%S")
+        now_str = lambda: datetime.now(timezone.utc).strftime("%H:%M:%S")
 
         def record_tool(tool_name: str, executed: bool, reason: str):
             tools_requested.append(tool_name)
@@ -362,7 +362,7 @@ class RiskManagerAgent:
         # 8. CASE MANAGEMENT & AUDIT RECORDING
         case_id = None
         if initial_risk >= 45.0 or response_tier in ["STEP_UP", "REVIEW", "AUTO_REMEDIATE"] or action_taken.startswith("STEP_UP_FAILED") or action_taken.startswith("STEP_UP_TIMEOUT"):
-            case_id = f"CASE-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+            case_id = f"CASE-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
             record_tool("create_case", True, "Persisting security case record for incident tracking.")
             self.tools.create_case(
                 case_id=case_id,

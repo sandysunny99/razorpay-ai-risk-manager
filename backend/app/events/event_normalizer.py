@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from app.events.event_model import SecurityEvent, EventType
 from app.core.security import generate_card_fingerprint
@@ -40,7 +40,7 @@ class EventNormalizer:
             event_id=f"EVT-RZP-{uuid.uuid4().hex[:8].upper()}",
             event_type=event_type,
             source="RAZORPAY_TEST_MODE",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             merchant_id=merchant_id,
             customer_id=entity.get("contact") or entity.get("email"),
             card_fingerprint=card_fingerprint,
@@ -73,7 +73,7 @@ class EventNormalizer:
             event_id=f"EVT-CF-{uuid.uuid4().hex[:8].upper()}",
             event_type=EventType.CLOUDFLARE_SECURITY_EVENT,
             source="CLOUDFLARE_EDGE",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             request_id=cf_ray,
             correlation_id=cf_ray,
             metadata={

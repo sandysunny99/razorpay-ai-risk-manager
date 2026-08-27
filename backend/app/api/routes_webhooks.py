@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 from typing import Optional
@@ -7,6 +8,7 @@ from app.events.event_normalizer import EventNormalizer
 from app.events.event_deduplicator import event_deduplicator
 from app.events.event_bus import event_bus
 from app.security.dlp import DLPEngine
+from app.core.security import verify_hmac_signature
 
 router = APIRouter(prefix="/api/v1/webhooks", tags=["Webhooks"])
 logger = logging.getLogger("webhooks_api")
@@ -42,7 +44,6 @@ async def receive_razorpay_webhook(
         )
 
     # 2. Idempotency Check (Provider Event ID or deterministic SHA-256 fallback)
-    import hashlib
     event_id = x_razorpay_event_id or request.headers.get("x-razorpay-event-id") or request.headers.get("X-Razorpay-Event-Id")
     event_key = event_id or hashlib.sha256(raw_body).hexdigest()
     if event_deduplicator.is_duplicate(event_key):

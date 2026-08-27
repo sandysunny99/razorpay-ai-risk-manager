@@ -21,8 +21,13 @@ wheels/
 .installed.cfg
 *.egg
 .pytest_cache/
+
+# FIX M-06: Never commit database files — they are ephemeral and may contain PII
 *.db
+*.sqlite
 *.sqlite3
+risk_manager.db
+backend/risk_manager.db
 
 # Node / Frontend
 node_modules/
@@ -38,3 +43,9 @@ frontend/node_modules/
 .env.local
 .env.*.local
 *.pem
+*.key
+*.p12
+*.pfx
+
+# Evaluation reports (generated — not source of truth)
+evaluation/final_evaluation_report.json

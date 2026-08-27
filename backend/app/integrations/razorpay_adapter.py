@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone, timezone
 from app.core.config import settings
 
 logger = logging.getLogger("razorpay_adapter")
@@ -50,7 +50,7 @@ class MockRazorpayAdapter(RazorpayAdapter):
             "token_id": token_id,
             "previous_status": "ACTIVE",
             "new_status": "REVOKED",
-            "revoked_at": datetime.utcnow().isoformat(),
+            "revoked_at": datetime.now(timezone.utc).isoformat(),
             "dry_run": self.dry_run,
             "gateway_reference": f"rzp_mock_{token_id[-6:]}_rev",
             "message": "Token successfully revoked in simulated Razorpay token vault."
@@ -61,7 +61,7 @@ class MockRazorpayAdapter(RazorpayAdapter):
         return {
             "token_id": token_id,
             "status": status,
-            "verified_at": datetime.utcnow().isoformat(),
+            "verified_at": datetime.now(timezone.utc).isoformat(),
             "vault_source": "MockRazorpayVault"
         }
 
@@ -76,7 +76,7 @@ class MockRazorpayAdapter(RazorpayAdapter):
         }
 
     async def rotate_token(self, token_id: str) -> Dict[str, Any]:
-        new_token_id = f"tok_rot_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        new_token_id = f"tok_rot_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
         self._vault[token_id] = "ROTATED"
         self._vault[new_token_id] = "ACTIVE"
         return {
@@ -88,7 +88,7 @@ class MockRazorpayAdapter(RazorpayAdapter):
         }
 
     async def request_step_up_challenge(self, transaction_id: str, challenge_method: str = "SMS_OTP_SIMULATION") -> Dict[str, Any]:
-        challenge_id = f"ch_demo_{datetime.utcnow().strftime('%H%M%S')}_{transaction_id[-4:]}"
+        challenge_id = f"ch_demo_{datetime.now(timezone.utc).strftime('%H%M%S')}_{transaction_id[-4:]}"
         logger.info(f"[MockRazorpayAdapter] Initiating Step-Up Challenge {challenge_id} for transaction {transaction_id}")
         return {
             "success": True,
@@ -96,8 +96,8 @@ class MockRazorpayAdapter(RazorpayAdapter):
             "transaction_id": transaction_id,
             "status": "CHALLENGE_REQUIRED",
             "challenge_method": challenge_method,
-            "created_at": datetime.utcnow().isoformat(),
-            "expires_at": (datetime.utcnow()).isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": (datetime.now(timezone.utc)).isoformat(),
             "message": "Simulated 2FA Step-Up Challenge initiated successfully."
         }
 
@@ -124,7 +124,7 @@ class MockRazorpayAdapter(RazorpayAdapter):
             "success": is_success,
             "challenge_id": challenge_id,
             "status": result_status,
-            "verified_at": datetime.utcnow().isoformat(),
+            "verified_at": datetime.now(timezone.utc).isoformat(),
             "message": msg
         }
 
@@ -142,7 +142,7 @@ class RazorpayTestAdapter(RazorpayAdapter):
             "success": True,
             "token_id": token_id,
             "new_status": "REVOKED",
-            "revoked_at": datetime.utcnow().isoformat(),
+            "revoked_at": datetime.now(timezone.utc).isoformat(),
             "dry_run": self.dry_run,
             "gateway_reference": f"rzp_test_{token_id[-6:]}_cancelled",
             "message": "Token cancelled via Razorpay Test Sandbox API."
@@ -152,7 +152,7 @@ class RazorpayTestAdapter(RazorpayAdapter):
         return {
             "token_id": token_id,
             "status": "REVOKED",
-            "verified_at": datetime.utcnow().isoformat(),
+            "verified_at": datetime.now(timezone.utc).isoformat(),
             "vault_source": "RazorpayTestSandbox"
         }
 
@@ -166,7 +166,7 @@ class RazorpayTestAdapter(RazorpayAdapter):
         }
 
     async def rotate_token(self, token_id: str) -> Dict[str, Any]:
-        new_token_id = f"tok_rot_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        new_token_id = f"tok_rot_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
         return {
             "success": True,
             "old_token_id": token_id,
@@ -176,15 +176,15 @@ class RazorpayTestAdapter(RazorpayAdapter):
         }
 
     async def request_step_up_challenge(self, transaction_id: str, challenge_method: str = "SMS_OTP_SIMULATION") -> Dict[str, Any]:
-        challenge_id = f"ch_test_{datetime.utcnow().strftime('%H%M%S')}_{transaction_id[-4:]}"
+        challenge_id = f"ch_test_{datetime.now(timezone.utc).strftime('%H%M%S')}_{transaction_id[-4:]}"
         return {
             "success": True,
             "challenge_id": challenge_id,
             "transaction_id": transaction_id,
             "status": "CHALLENGE_REQUIRED",
             "challenge_method": challenge_method,
-            "created_at": datetime.utcnow().isoformat(),
-            "expires_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": datetime.now(timezone.utc).isoformat(),
             "message": "Step-up challenge created via Razorpay Sandbox."
         }
 
@@ -193,7 +193,7 @@ class RazorpayTestAdapter(RazorpayAdapter):
             "success": success,
             "challenge_id": challenge_id,
             "status": "VERIFIED" if success else "FAILED",
-            "verified_at": datetime.utcnow().isoformat(),
+            "verified_at": datetime.now(timezone.utc).isoformat(),
             "message": "Challenge verified." if success else "Challenge failed."
         }
 

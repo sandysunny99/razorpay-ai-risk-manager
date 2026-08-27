@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.models.entities import PaymentToken, Card
 
 class TokenRiskEngine:
@@ -27,7 +27,7 @@ class TokenRiskEngine:
         reasons: List[str] = []
         is_zombie = False
         zombie_reason: Optional[str] = None
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Check if underlying card is expired or inactive
         card_is_dead = card.is_expired or card.status in ["EXPIRED", "BLOCKED", "SUSPENDED"]

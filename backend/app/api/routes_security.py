@@ -1,5 +1,6 @@
+import uuid
 from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.entities import CloudflareSecurityEvent, DLPEvent
@@ -111,24 +112,49 @@ def get_security_subsystem_health() -> Dict[str, Any]:
     }
 
 @router.post("/dlp/test")
-def test_dlp_scrubber(payload: Dict[str, Any], db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def test_dlp_scrubber(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
     """
     Demonstration endpoint: Submits text/JSON containing synthetic test PANs
     and returns real-time DLP violation scans and redacted output.
+
+    FIX L-06: Request body capped at 10 KB to prevent DoS via oversized payloads.
     """
-    test_text = payload.get("input_text", "Customer submitted card 4111 1111 1111 4921 with secret sk_live_9a8b7c6d5e")
+    MAX_BODY_BYTES = 10 * 1024  # 10 KB
+    raw = await request.body()
+    if len(raw) > MAX_BODY_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Request body exceeds maximum allowed size of {MAX_BODY_BYTES} bytes.",
+        )
+    import json as _json
+    try:
+        payload = _json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload.")
+
+    test_text = payload.get(
+        "input_text",
+        "Customer submitted card 4111 1111 1111 4921 with secret sk_live_9a8b7c6d5e",
+    )
+    # Guard against excessively long strings inside valid JSON
+    if len(str(test_text)) > 5000:
+        raise HTTPException(status_code=400, detail="input_text exceeds 5,000 characters.")
+
     violations = DLPEngine.scan_for_violations(test_text)
     redacted = DLPEngine.redact(test_text)
 
-    # Record DLP event in database
+    # Record DLP event in database (FIX L-03: uuid at module level)
     for v in violations:
         evt = DLPEvent(
-            event_id=f"DLP-{uuid_hex()}",
+            event_id=f"DLP-{uuid.uuid4().hex[:8].upper()}",
             violation_type=v["type"],
             severity=v["severity"],
             action_taken="REDACTED",
             source_context="DEMO_SECURITY_TEST",
-            masked_sample=v["sample"]
+            masked_sample=v["sample"],
         )
         db.add(evt)
     db.commit()
@@ -138,9 +164,5 @@ def test_dlp_scrubber(payload: Dict[str, Any], db: Session = Depends(get_db)) ->
         "violations_detected": len(violations),
         "violation_details": violations,
         "sanitized_output": redacted,
-        "dlp_status": "ENFORCED"
+        "dlp_status": "ENFORCED",
     }
-
-def uuid_hex() -> str:
-    import uuid
-    return uuid.uuid4().hex[:8].upper()

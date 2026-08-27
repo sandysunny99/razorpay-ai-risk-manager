@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.entities import AuditEvent
@@ -9,8 +9,19 @@ from app.engines.audit_ledger import AuditLedgerEngine
 router = APIRouter(prefix="/audit", tags=["Audit Trail"])
 
 @router.get("/events", response_model=List[AuditEventResponse])
-def list_audit_events(db: Session = Depends(get_db)):
-    events = db.query(AuditEvent).order_by(AuditEvent.id.desc()).all()
+def list_audit_events(
+    db: Session = Depends(get_db),
+    limit: int = Query(50, ge=1, le=500, description="Max events to return"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+):
+    """Return audit events with pagination support (limit/offset)."""
+    events = (
+        db.query(AuditEvent)
+        .order_by(AuditEvent.id.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return [
         AuditEventResponse(
             event_id=e.event_id,

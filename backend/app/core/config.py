@@ -1,27 +1,69 @@
 import os
+import secrets
 from pydantic_settings import BaseSettings
-from typing import Dict, Any
+from typing import List
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Razorpay Risk Manager Agent"
+    APP_NAME: str = "Razorpay AI Risk Manager Agent"
     APP_ENV: str = "development"
     DEBUG: bool = True
     API_V1_STR: str = "/api/v1"
-    
-    # Security Boundary Key for HMAC Card Fingerprinting
-    HMAC_SECRET_KEY: str = "razorpay_risk_engine_hmac_secret_2026_salt_xyz987"
-    
+
+    # ----------------------------------------------------------------
+    # CORS — FIX C-01
+    # Provide a comma-separated list of allowed origins via env var.
+    # Defaults are dev-only. In production, set ALLOWED_ORIGINS explicitly.
+    # ----------------------------------------------------------------
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://localhost:8000"
+
+    @property
+    def allowed_origins_list(self) -> List[str]:
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+
+    # ----------------------------------------------------------------
+    # HMAC Secret — FIX C-02
+    # No fallback string. If HMAC_SECRET_KEY is absent, generate a
+    # random one at startup (demo-safe) and warn loudly.
+    # In production, always set this via Render secret env var.
+    # ----------------------------------------------------------------
+    HMAC_SECRET_KEY: str = ""
+
+    @property
+    def hmac_secret_resolved(self) -> str:
+        if self.HMAC_SECRET_KEY:
+            return self.HMAC_SECRET_KEY
+        # For CI / local dev without an env file, generate an ephemeral key
+        # and warn. This is intentionally NOT a stable default string.
+        import warnings
+        warnings.warn(
+            "HMAC_SECRET_KEY not set — using ephemeral random key. "
+            "Set HMAC_SECRET_KEY env var for stable production operation.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return secrets.token_hex(32)
+
+    # ----------------------------------------------------------------
+    # API Auth Key — Phase 3
+    # Optional in DRY_RUN / demo mode; required in production.
+    # ----------------------------------------------------------------
+    API_SECRET_KEY: str = ""
+
     # Database
     DATABASE_URL: str = "sqlite:///./risk_manager.db"
-    
+
     # Dry Run Safety Guard
     DRY_RUN: bool = True
-    
+
+    # App mode (demo | production)
+    APP_MODE: str = "demo"
+
     # Razorpay Test Configuration
     RAZORPAY_KEY_ID: str = "rzp_test_mock_agent_key"
     RAZORPAY_KEY_SECRET: str = "rzp_test_mock_agent_secret"
+    RAZORPAY_WEBHOOK_SECRET: str = ""
     USE_MOCK_RAZORPAY: bool = True
-    
+
     # Risk Scoring Weights (Configurable)
     WEIGHT_TRANSACTION: float = 25.0
     WEIGHT_EXPOSURE: float = 25.0
@@ -29,17 +71,17 @@ class Settings(BaseSettings):
     WEIGHT_TOKEN: float = 15.0
     WEIGHT_CUSTOMER: float = 10.0
     WEIGHT_MERCHANT: float = 10.0
-    
+
     # Thresholds
     THRESHOLD_LOW: float = 25.0
     THRESHOLD_MEDIUM: float = 50.0
-    THRESHOLD_HIGH: float = 75.0
+    THRESHOLD_HIGH: float = 60.0
     THRESHOLD_CRITICAL: float = 75.0
-    
+
     # Policy Guardrails
     AUTO_REVOKE_TOKEN_ON_CRITICAL: bool = True
     AUTO_SUSPEND_CARD_ON_CRITICAL: bool = False  # Requires human review
-    
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 settings = Settings()

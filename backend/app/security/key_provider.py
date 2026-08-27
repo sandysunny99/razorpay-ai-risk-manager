@@ -1,7 +1,7 @@
 import os
 import hashlib
 from typing import Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 class KeyProvider:
     """Abstract interface for cryptographic key management."""
@@ -48,13 +48,13 @@ class EnvironmentKeyProvider(KeyProvider):
         if old_version in self._keys:
             self._keys[old_version]["status"] = "RETIRED"
             
-        seed = new_key_material or f"razorpay_risk_agent_key_rotation_{new_version}_{datetime.utcnow().isoformat()}"
+        seed = new_key_material or f"razorpay_risk_agent_key_rotation_{new_version}_{datetime.now(timezone.utc).isoformat()}"
         self._keys[new_version] = {
             "key_id": f"key_{new_version}_rotated",
             "version": new_version,
             "key_bytes": hashlib.sha256(seed.encode("utf-8")).digest(),
             "status": "ACTIVE",
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         self._active_version = new_version
         return self._keys[new_version]

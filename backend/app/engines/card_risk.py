@@ -1,5 +1,5 @@
 from typing import Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from app.models.entities import Card
 
 class CardRiskEngine:
@@ -15,7 +15,7 @@ class CardRiskEngine:
     def evaluate(self, card: Card) -> Dict[str, Any]:
         score = 0.0
         reasons: List[str] = []
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # 1. Expiration Check
         if card.is_expired or card.expiry_year < now.year or (card.expiry_year == now.year and card.expiry_month < now.month):
