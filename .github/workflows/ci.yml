@@ -36,8 +36,7 @@ jobs:
           pip install ruff bandit mypy
 
       - name: Ruff Linting (Python)
-        # Config is in pyproject.toml — do NOT pass --select/--ignore CLI flags
-        # as they override the per-file-ignores in pyproject.toml.
+        # Config read from pyproject.toml — no CLI flags that override per-file-ignores
         run: ruff check backend/ scripts/
 
       - name: Bandit SAST — Security Analysis
@@ -47,18 +46,17 @@ jobs:
             --skip B101,B311 \
             -f json \
             -o bandit_report.json || true
-          # Fail if HIGH severity issues found
-          python -c "
+          python - <<'EOF'
           import json, sys
           with open('bandit_report.json') as f:
               report = json.load(f)
           highs = [i for i in report.get('results', []) if i['issue_severity'] == 'HIGH']
           if highs:
               for h in highs:
-                  print(f'HIGH: {h[\"issue_text\"]} @ {h[\"filename\"]}:{h[\"line_number\"]}')
+                  print('HIGH:', h['issue_text'], '@', h['filename'] + ':' + str(h['line_number']))
               sys.exit(1)
-          print(f'Bandit: 0 HIGH issues found.')
-          "
+          print('Bandit: 0 HIGH issues found.')
+          EOF
 
       - name: MyPy Type Checking (Backend)
         run: |
@@ -218,16 +216,16 @@ jobs:
         run: docker build -t razorpay-ai-risk-manager:${{ github.sha }} .
 
       - name: 9. Docker Image CVE Scan (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        # aquasecurity/trivy-action latest stable: v0.36.0 (2026-04-22)
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'razorpay-ai-risk-manager:${{ github.sha }}'
           format: 'table'
+          # Advisory mode (exit-code=0): reports CVEs but does NOT fail the build.
+          # Reason: python:3.12-slim-bookworm base-image CVEs are upstream OS issues
+          # patched by Docker Hub. Our app code has 0 HIGH/CRITICAL bandit findings.
+          # To re-enable gate: set exit-code to '1' after pinning base image digest.
           exit-code: '0'
-          # Advisory mode: scan reports CVEs but does not block the build.
-          # Rationale: CRITICAL CVEs in python:3.12-slim-bookworm base image are
-          # upstream issues patched by Docker Hub on their release cycle.
-          # Our application code has 0 HIGH/CRITICAL findings (verified by bandit SAST).
-          # Re-enable exit-code=1 once base image is pinned to a specific digest.
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
           vuln-type: 'os,library'
@@ -238,12 +236,12 @@ jobs:
           docker tag razorpay-ai-risk-manager:${{ github.sha }} razorpay-ai-risk-manager:latest
           echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
 
-      - name: 11. Create GitHub Release (main branch, on tag)
-        if: github.ref == 'refs/heads/main' && startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v1
+      - name: 11. Create GitHub Release (tagged commits only)
+        # Only runs when a tag like v2.0.0-rc3 is pushed — not on every main push
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            evaluation/final_evaluation_report.json
             docs/FINAL_PUBLIC_DEPLOYMENT_EVIDENCE.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
