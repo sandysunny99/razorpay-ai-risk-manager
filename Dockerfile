@@ -14,7 +14,7 @@ RUN npm run build
 # Stage 2: Production Python Backend (FastAPI + Uvicorn)
 # Phase 3: Now uses .dockerignore to exclude evaluation/, docs/, scripts/
 # ============================================================
-FROM python:3.12-slim AS runner
+FROM python:3.12-slim-bookworm AS runner
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
