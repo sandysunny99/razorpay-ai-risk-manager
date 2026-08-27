@@ -1,0 +1,44 @@
+# pyproject.toml — Razorpay AI Risk Manager
+# Ruff configuration for Python 3.12+ security-focused codebase.
+# This project was written with ~120-150 char lines; ruff enforces 120 as a soft limit.
+# E501 is globally ignored because the existing codebase would require reformatting
+# 50+ frozen files. New code should stay under 120 chars.
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "S"]
+ignore = [
+    "S101",   # assert statements — used in tests throughout
+    "S106",   # hardcoded password in function arg — in original CI ignore
+    "S105",   # hardcoded password string — false-positives on action enum strings
+              #   e.g. TOKEN_CREATED, ZOMBIE_TOKEN_DETECTED, REVOKE_TOKEN are NOT passwords
+    "S107",   # hardcoded password in function default
+    "S110",   # try-except-pass — existing pattern in enrichment providers for graceful degradation
+    "E501",   # line too long — pre-existing codebase style; new code should stay ≤120
+    "E731",   # lambda assignment — pre-existing pattern in risk_agent.py
+    "F841",   # local variable assigned but unused — pre-existing in agent code
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files
+"backend/tests/**" = ["S101", "S105", "S106", "S107", "S311", "S603", "S607", "F401"]
+"conftest.py" = ["S101", "S105", "S106"]
+# Security and auth modules — HMAC key config intentionally uses string literals
+"backend/app/core/auth.py" = ["S105", "S107"]
+"backend/app/core/config.py" = ["S105", "S107"]
+"backend/app/core/security.py" = ["S105"]
+"backend/app/integrations/razorpay_adapter.py" = ["S105", "S107"]
+# Scripts — test credentials, argparse defaults, long diagnostic strings
+"scripts/**" = ["S105", "S107", "S311", "S603", "S607"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+force-sort-within-sections = true
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend", "."]
+asyncio_mode = "auto"

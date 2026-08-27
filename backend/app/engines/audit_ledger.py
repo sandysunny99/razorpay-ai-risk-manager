@@ -1,15 +1,18 @@
+from datetime import datetime, timezone
 import hashlib
 import json
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
 from sqlalchemy.orm import Session
+
 from app.models.entities import AuditEvent
+
 
 class AuditLedgerEngine:
     """
     Tamper-Evident Hash-Chained Audit Log Engine.
     Guarantees cryptographic verification of all agent decisions and gateway remediations.
-    
+
     Each block (AuditEvent) contains:
     current_hash = SHA256(event_id + actor + decision + risk_score + policy + action + verification + details + previous_hash)
     """

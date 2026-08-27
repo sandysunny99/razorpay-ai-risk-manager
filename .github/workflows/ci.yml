@@ -36,7 +36,9 @@ jobs:
           pip install ruff bandit mypy
 
       - name: Ruff Linting (Python)
-        run: ruff check backend/ scripts/ --select=E,W,F,I,S --ignore=S101,S106
+        # Config is in pyproject.toml — do NOT pass --select/--ignore CLI flags
+        # as they override the per-file-ignores in pyproject.toml.
+        run: ruff check backend/ scripts/
 
       - name: Bandit SAST — Security Analysis
         run: |
@@ -200,7 +202,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: 7a. Frontend TypeScript Strict Mode Check
         working-directory: ./frontend

@@ -1,15 +1,17 @@
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta, timezone
-from app.models.entities import PaymentToken, Card
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+from app.models.entities import Card, PaymentToken
+
 
 class TokenRiskEngine:
     """
     Token Risk Engine & Zombie Token Detector.
-    
+
     ZOMBIE TOKEN DEFINITION:
-    A payment token remains ACTIVE on merchant/vault records despite the 
-    underlying credit card being EXPIRED, BLOCKED, or SUSPENDED. If this 
-    token is actively used for authorization, it represents severe risk of 
+    A payment token remains ACTIVE on merchant/vault records despite the
+    underlying credit card being EXPIRED, BLOCKED, or SUSPENDED. If this
+    token is actively used for authorization, it represents severe risk of
     unauthorized recurring billing, token hijacking, or failure to remediate.
     """
 
