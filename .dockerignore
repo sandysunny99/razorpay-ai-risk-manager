@@ -1,6 +1,11 @@
 # .dockerignore — Razorpay AI Risk Manager
 # Excludes development, evaluation, and secret files from the production Docker image.
 # This reduces image size and prevents evaluation data / secrets from shipping to prod.
+#
+# IMPORTANT: .dockerignore patterns apply to the BUILD CONTEXT sent to the Docker daemon.
+# The frontend Stage 1 build still needs frontend/src/, package.json etc. to compile.
+# Only the final runner stage (Stage 2) should exclude those files — but since .dockerignore
+# applies to the whole build context, we only exclude what Stage 1 doesn't need.
 
 # ── Python artifacts ──────────────────────────────────────────
 __pycache__/
@@ -10,8 +15,6 @@ __pycache__/
 .Python
 *.egg-info/
 .eggs/
-dist/
-build/
 .pytest_cache/
 .coverage
 htmlcov/
@@ -35,28 +38,20 @@ htmlcov/
 .gitignore
 .gitattributes
 
-# ── Evaluation data — not needed in runtime image ─────────────
-# The evaluation dataset (2000 synthetic records) is only needed
-# for offline benchmarking. The /api/v1/evaluation/* endpoints
-# use a separate scoring path that does not require this data at runtime.
+# ── Evaluation data — not needed in any build stage ───────────
 evaluation/
 
-# ── Documentation ─────────────────────────────────────────────
+# ── Documentation (large, not needed at runtime) ──────────────
 docs/
-*.md
-!README.md
 
 # ── Scripts (not needed in production image) ──────────────────
 scripts/
 
-# ── Frontend source (only the built dist/ is needed) ──────────
-frontend/src/
-frontend/public/
-frontend/*.json
-frontend/*.ts
-frontend/*.js
-frontend/*.html
+# ── Frontend: only exclude node_modules (source files needed for Stage 1 build) ──
+# Do NOT exclude frontend/src/, frontend/package.json, frontend/*.ts etc.
+# Those are required by the frontend-builder stage to compile the React app.
 frontend/node_modules/
+frontend/dist/
 
 # ── Development tools ─────────────────────────────────────────
 .vscode/
