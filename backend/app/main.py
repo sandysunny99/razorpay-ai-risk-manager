@@ -75,7 +75,7 @@ if settings.sentry_configured:
             integrations=[FastApiIntegration(), SqlalchemyIntegration()],
             traces_sample_rate=0.1,
             environment=settings.APP_ENV,
-            release="razorpay-risk-manager@2.0.0-rc2",
+            release="razorpay-risk-manager@2.0.0-rc3",
             send_default_pii=False,
             before_send=_scrub_sentry_event,
         )

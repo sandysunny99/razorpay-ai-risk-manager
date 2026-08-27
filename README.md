@@ -3,7 +3,8 @@
 <div align="center">
 
 ![Razorpay Risk Manager Banner](https://img.shields.io/badge/Razorpay-AI%20Risk%20Manager%20Agent-0D83FF?style=for-the-badge&logo=shield&logoColor=white)
-![Build Status](https://img.shields.io/badge/Build-Passing%20(54%20Tests)-10B981?style=for-the-badge)
+![Release Version](https://img.shields.io/badge/Release-v2.0.0--rc3-blue?style=for-the-badge)
+![Build Status](https://img.shields.io/badge/Build-Passing%20(73%20Tests)-10B981?style=for-the-badge)
 ![Autonomous Precision](https://img.shields.io/badge/Auto--Action%20Precision-100.0%25%20(0%20FP)-6366F1?style=for-the-badge)
 ![Detection Recall](https://img.shields.io/badge/Detection%20Recall-88.06%25%20(T=40.0)-3B82F6?style=for-the-badge)
 ![Security Standard](https://img.shields.io/badge/Security-PCI--Aware%20Design%20%7C%20HMAC--SHA--256%20PAN%20Fingerprinting-8B5CF6?style=for-the-badge)

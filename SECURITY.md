@@ -81,8 +81,10 @@ and the CI fix session (commit d94ece3):
 - **Docs Gating**: /docs and /redoc disabled when APP_ENV=production
 - **Pagination**: Audit events endpoint supports limit/offset query parameters
 - **DLP Size Limit**: /api/v1/security/dlp/test body capped at 10KB
-- **datetime.utcnow()**: Replaced across all 9 affected files (Python 3.12 compatibility)
-- **Alembic**: Database migration framework added for PostgreSQL production path
-- **Sentry**: Optional error monitoring with PAN scrubbing before events are sent
-- **CI/CD**: Parallel test jobs, Trivy CVE scan, bandit SAST, ruff linting, TypeScript check
+## Security Enhancements in v2.0.0-rc3
+
+- **JWT & Role-Based Access Control (RBAC)**: Cryptographically verified JWT tokens (`Role.VIEWER`, `Role.OPERATOR`, `Role.ADMIN`) with HS256 signature verification.
+- **OmniSLM Non-Blocking Defense**: Local SLM entity extraction and threat text classifier enhancement with 100% regex fallback.
+- **Razorpay Sandbox HMAC Testing**: Automated test webhook payload generator matching official Razorpay webhook verification mechanics.
+- **Dependency Security**: Pinned Trivy vulnerability scanning to `aquasecurity/trivy-action@v0.36.0` and hardened base images to Debian Bookworm.
 
