@@ -65,6 +65,18 @@ class Settings(BaseSettings):
     RAZORPAY_WEBHOOK_SECRET: str = ""
     USE_MOCK_RAZORPAY: bool = True
 
+    @property
+    def razorpay_test_mode(self) -> bool:
+        return self.RAZORPAY_KEY_ID.startswith("rzp_test_")
+
+    @property
+    def razorpay_configured(self) -> bool:
+        return bool(
+            self.RAZORPAY_KEY_ID
+            and self.RAZORPAY_KEY_SECRET
+            and not self.RAZORPAY_KEY_ID.startswith("rzp_test_mock")
+        )
+
     # Risk Scoring Weights (Configurable)
     WEIGHT_TRANSACTION: float = 25.0
     WEIGHT_EXPOSURE: float = 25.0
