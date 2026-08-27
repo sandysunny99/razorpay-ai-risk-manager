@@ -230,6 +230,7 @@ class AgentToolRegistry:
         verification: str,
         details: Dict[str, Any]
     ) -> AuditEvent:
+        merchant_id = details.get("merchant_id", "default") if isinstance(details, dict) else "default"
         return AuditLedgerEngine.append_event(
             db=self.db,
             event_id=event_id,
@@ -241,7 +242,8 @@ class AgentToolRegistry:
             action_requested=action_requested,
             action_executed=action_executed,
             verification=verification,
-            details=details
+            details=details,
+            merchant_id=merchant_id
         )
 
     # -------------------------------------------------------------

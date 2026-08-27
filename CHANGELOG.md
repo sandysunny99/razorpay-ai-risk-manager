@@ -5,6 +5,23 @@ All notable changes to the **Razorpay AI Risk Manager** project will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] — 2026-08-27
+
+### Added
+- **OpenTelemetry Distributed Tracing** (`backend/app/core/telemetry.py`): Full span instrumentation for `risk.agent.evaluate`, `cti.lookup`, `razorpay.token.revoke`, and `audit.ledger.append` with optional OTLP export and local tracing fallback.
+- **Multi-Tenant Row-Level Database Isolation** (`backend/app/models/entities.py`, `backend/app/core/database.py`): Strict `merchant_id` row-level scoping on audit events and risk assessments with automated SQLite migration helper.
+- **Live Razorpay Webhook Receiver** (`backend/app/api/routes_webhook.py`): Real-time endpoint with HMAC-SHA256 signature verification and background task event routing (`payment.captured`, `payment.failed`, `payment.dispute.created`, `token.expired`).
+- **SOC Evolution UI Redesign**:
+  - `ThreatFeedPanel`: Real-time sliding threat intelligence feed sidebar.
+  - `RiskHeatmap`: 10×10 interactive transaction matrix with dynamic forensic inspector.
+  - `InvestigationTimeline`: Upgraded 8-phase vertical stepper with icons, expandable telemetry, and copyable SHA-256 block hashes.
+  - Global Threat Level Bar in `Header`: Dynamic threat status with animated score transitions.
+  - `CommandPalette` (`⌘K` / `Ctrl+K`): Instant fuzzy/substring search across cards, scenarios, alerts, and audit events.
+  - `useKeyboardShortcuts`: Hotkeys for fast SOC terminal operations (`⌘K`, `⌘D`, `⌘R`, `1-4`, `?`, `ESC`).
+- **CodeQL Automated SAST Workflow** (`.github/workflows/codeql.yml`): Continuous security analysis across Python and JavaScript/TypeScript codebases.
+- **Test Coverage Gate**: Integrated `pytest-cov` automated coverage reporting and enforcement in CI pipeline.
+- **Semantic Release Configuration** (`.releaserc.json`): Automated version lifecycle and release management.
+
 ---
 
 ## [2.0.0-rc3] — 2026-08-27

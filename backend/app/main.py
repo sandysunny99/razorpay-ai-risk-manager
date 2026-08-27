@@ -39,10 +39,12 @@ from app.api.routes_risk import router as risk_router
 from app.api.routes_security import router as security_router
 from app.api.routes_stream import router as stream_router
 from app.api.routes_tokens import router as tokens_router
+from app.api.routes_webhook import router as live_webhook_router
 from app.api.routes_webhooks import router as webhooks_router
 from app.api.routes_zombie_cards import router as zombie_router
 from app.core.config import settings
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import SessionLocal, init_db
+from app.core.telemetry import setup_telemetry
 from app.db.seed_data import seed_initial_data
 
 logger = logging.getLogger("main")
@@ -75,7 +77,7 @@ if settings.sentry_configured:
             integrations=[FastApiIntegration(), SqlalchemyIntegration()],
             traces_sample_rate=0.1,
             environment=settings.APP_ENV,
-            release="razorpay-risk-manager@2.0.0-rc3",
+            release="razorpay-risk-manager@2.1.0",
             send_default_pii=False,
             before_send=_scrub_sentry_event,
         )
@@ -84,7 +86,7 @@ if settings.sentry_configured:
         logger.warning("Sentry initialization failed: %s — continuing without error monitoring", sentry_exc)
 
 # ─── Database bootstrap ────────────────────────────────────────────────────
-Base.metadata.create_all(bind=engine)
+init_db()
 with SessionLocal() as db:
     seed_initial_data(db)
 
@@ -122,10 +124,13 @@ app = FastAPI(
         "Agentic security layer for payment risk, card exposure, "
         "token protection, and controlled remediation."
     ),
-    version="2.0.0-rc2",
+    version="2.1.0",
     docs_url=_docs_url,
     redoc_url=_redoc_url,
 )
+
+# OpenTelemetry Instrumentation
+setup_telemetry(app)
 
 # Attach rate limiter state and handler
 app.state.limiter = limiter
@@ -213,6 +218,7 @@ app.include_router(exposure_router,   prefix=settings.API_V1_STR)
 app.include_router(security_router,   prefix=settings.API_V1_STR)
 app.include_router(zombie_router)
 app.include_router(webhooks_router)
+app.include_router(live_webhook_router)
 app.include_router(stream_router)     # Phase 4: SSE stream
 
 # ─── Static SPA serving ───────────────────────────────────────────────────

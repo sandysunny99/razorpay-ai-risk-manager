@@ -111,6 +111,7 @@ class RiskAssessment(Base):
     transaction_id = Column(String(64), nullable=True)
     card_id = Column(String(64), nullable=False)
     token_id = Column(String(64), nullable=True)
+    merchant_id = Column(String(64), default="default", index=True, nullable=False)
     composite_score = Column(Float, nullable=False)  # 0 to 100
     severity = Column(String(32), nullable=False)  # LOW, MEDIUM, HIGH, CRITICAL
     factor_breakdown = Column(JSON, default=dict)
@@ -141,6 +142,7 @@ class AuditEvent(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(String(64), unique=True, index=True, nullable=False)
+    merchant_id = Column(String(64), default="default", index=True, nullable=False)
     actor = Column(String(64), default="RiskManagerAgent")
     agent_decision = Column(Text, nullable=False)
     risk_score = Column(Float, nullable=False, index=True)

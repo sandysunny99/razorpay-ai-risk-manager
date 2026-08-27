@@ -44,18 +44,21 @@ class MockRazorpayAdapter(RazorpayAdapter):
         self._vault: Dict[str, str] = {}
 
     async def revoke_payment_token(self, token_id: str, reason: str = "Agentic Risk Remediation") -> Dict[str, Any]:
-        logger.info(f"[MockRazorpayAdapter] Revoking token {token_id}. Reason: {reason}")
-        self._vault[token_id] = "REVOKED"
-        return {
-            "success": True,
-            "token_id": token_id,
-            "previous_status": "ACTIVE",
-            "new_status": "REVOKED",
-            "revoked_at": datetime.now(timezone.utc).isoformat(),
-            "dry_run": self.dry_run,
-            "gateway_reference": f"rzp_mock_{token_id[-6:]}_rev",
-            "message": "Token successfully revoked in simulated Razorpay token vault."
-        }
+        from app.core.telemetry import trace_span
+
+        with trace_span("razorpay.token.revoke", {"token_id": token_id, "reason": reason}):
+            logger.info(f"[MockRazorpayAdapter] Revoking token {token_id}. Reason: {reason}")
+            self._vault[token_id] = "REVOKED"
+            return {
+                "success": True,
+                "token_id": token_id,
+                "previous_status": "ACTIVE",
+                "new_status": "REVOKED",
+                "revoked_at": datetime.now(timezone.utc).isoformat(),
+                "dry_run": self.dry_run,
+                "gateway_reference": f"rzp_mock_{token_id[-6:]}_rev",
+                "message": "Token successfully revoked in simulated Razorpay token vault."
+            }
 
     async def get_token_status(self, token_id: str) -> Dict[str, Any]:
         status = self._vault.get(token_id, "REVOKED")

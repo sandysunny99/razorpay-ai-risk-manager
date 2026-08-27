@@ -188,8 +188,10 @@ jobs:
       - name: 1. Test Set Hash Immutability Gate
         run: python scripts/verify_test_set.py
 
-      - name: 2. Full Pytest Suite (Regression Check)
-        run: pytest -q --tb=short
+      - name: 2. Full Pytest Suite & Coverage Gate
+        run: |
+          pip install pytest-cov
+          python -m pytest --cov=backend/app --cov-report=xml --cov-report=term --cov-fail-under=75 -q --tb=short
 
       - name: 3. Reproducible Final Evaluation Benchmark
         run: python scripts/run_final_evaluation.py

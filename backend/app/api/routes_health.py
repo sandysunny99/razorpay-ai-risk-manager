@@ -14,7 +14,7 @@ def health_check() -> Dict[str, Any]:
     return {
         "status": "healthy",
         "service": "Razorpay AI Risk Manager Gateway",
-        "version": "2.0.0-rc3",
+        "version": "2.1.0",
         "environment": "production-like"
     }
 

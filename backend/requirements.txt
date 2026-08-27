@@ -21,3 +21,7 @@ gunicorn>=22.0.0
 razorpay>=1.4.2
 # ── Phase 5: Production JWT / RBAC ──
 python-jose[cryptography]>=3.3.0
+# ── Session 4: OpenTelemetry Distributed Tracing ──
+opentelemetry-sdk>=1.24.0
+opentelemetry-exporter-otlp-proto-http>=1.24.0
+opentelemetry-instrumentation-fastapi>=0.45b0

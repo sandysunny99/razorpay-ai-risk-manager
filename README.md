@@ -2,13 +2,13 @@
 
 <div align="center">
 
-![Razorpay Risk Manager Banner](https://img.shields.io/badge/Razorpay-AI%20Risk%20Manager%20Agent-0D83FF?style=for-the-badge&logo=shield&logoColor=white)
-![Release Version](https://img.shields.io/badge/Release-v2.0.0--rc3-blue?style=for-the-badge)
-![Build Status](https://img.shields.io/badge/Build-Passing%20(73%20Tests)-10B981?style=for-the-badge)
-![Autonomous Precision](https://img.shields.io/badge/Auto--Action%20Precision-100.0%25%20(0%20FP)-6366F1?style=for-the-badge)
-![Detection Recall](https://img.shields.io/badge/Detection%20Recall-88.06%25%20(T=40.0)-3B82F6?style=for-the-badge)
-![Security Standard](https://img.shields.io/badge/Security-PCI--Aware%20Design%20%7C%20HMAC--SHA--256%20PAN%20Fingerprinting-8B5CF6?style=for-the-badge)
-![Hackathon Track](https://img.shields.io/badge/Track-AI%20Risk%20Manager%20(2026)-F59E0B?style=for-the-badge)
+[![CI Status](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sandysunny99/razorpay-ai-risk-manager?color=0D83FF)](https://github.com/sandysunny99/razorpay-ai-risk-manager/releases)
+[![Tests](https://img.shields.io/badge/Tests-83%20Passed-10B981?style=flat-square)](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions)
+[![Precision](https://img.shields.io/badge/Precision-100%25%20(0%20FP)-6366F1?style=flat-square)](https://github.com/sandysunny99/razorpay-ai-risk-manager)
+[![Recall](https://img.shields.io/badge/Recall-88.06%25-3B82F6?style=flat-square)](https://github.com/sandysunny99/razorpay-ai-risk-manager)
+[![Security](https://img.shields.io/badge/Security%20Score-95%2F100-10B981?style=flat-square)](https://github.com/sandysunny99/razorpay-ai-risk-manager/blob/main/SECURITY.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green?style=flat-square)](LICENSE)
 
 **"Razorpay AI Risk Manager is an agentic payment-risk prototype that detects suspicious activity, investigates correlated evidence, applies policy-controlled responses, and verifies security actions."**
 
@@ -27,6 +27,23 @@
 ## 🤖 2. Why It Is Agentic (Not Just an LLM)
 
 We do not define "agentic" as simply calling an LLM. True agentic execution in this system consists of an end-to-end autonomous perception, reasoning, and closed-loop execution lifecycle:
+
+```mermaid
+graph TD
+    A[Payment Webhook] -->|FastAPI Gateway| B[Risk Agent Engine]
+    B --> C{Composite Risk Score}
+    C -->|0-34| D[ALLOW: Instant Settlement]
+    C -->|35-39| E[MONITOR: Telemetry Watch]
+    C -->|40-64| F[STEP-UP 2FA: Challenge Required]
+    C -->|65-74| G[SOC REVIEW: Analyst Alert]
+    C -->|≥75| H[AUTO-REVOKE: Vault Token Revocation]
+    H --> I[Razorpay Vault Adapter]
+    I --> J[Verify State = REVOKED]
+    J --> K[Tamper-Evident SHA-256 Audit Ledger]
+    B --> L[OmniSLM NLP Classifier Layer]
+    B --> M[CTI Stealer Log Feed]
+    B --> N[Cloudflare WAF / Bot Telemetry]
+```
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐

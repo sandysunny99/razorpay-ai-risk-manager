@@ -21,6 +21,9 @@ wheels/
 .installed.cfg
 *.egg
 .pytest_cache/
+.coverage
+coverage.xml
+*.cover
 
 # FIX M-06: Never commit database files — they are ephemeral and may contain PII
 *.db

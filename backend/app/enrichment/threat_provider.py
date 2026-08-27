@@ -22,25 +22,31 @@ class MockThreatProvider(ThreatProvider):
     }
 
     def check_url_or_host(self, target: str) -> Dict[str, Any]:
-        target_lower = (target or "").lower().strip()
-        for domain, info in self.KNOWN_MALICIOUS_DOMAINS.items():
-            if domain in target_lower:
-                return {
-                    "query_status": "ok",
-                    "threat": info["threat"],
-                    "status": info["status"],
-                    "confidence": info["confidence"],
-                    "provider": "MOCK_URLHAUS",
-                    "cached": True
-                }
-        return {
-            "query_status": "no_results",
-            "threat": "none",
-            "status": "clean",
-            "confidence": 0.0,
-            "provider": "MOCK_URLHAUS",
-            "cached": True
-        }
+        from app.core.telemetry import trace_span
+
+        with trace_span("cti.lookup", {"target": target or "unknown"}) as span:
+            target_lower = (target or "").lower().strip()
+            for domain, info in self.KNOWN_MALICIOUS_DOMAINS.items():
+                if domain in target_lower:
+                    span.set_attribute("cti.confidence", info["confidence"])
+                    span.set_attribute("cti.threat", info["threat"])
+                    return {
+                        "query_status": "ok",
+                        "threat": info["threat"],
+                        "status": info["status"],
+                        "confidence": info["confidence"],
+                        "provider": "MOCK_URLHAUS",
+                        "cached": True
+                    }
+            span.set_attribute("cti.confidence", 0.0)
+            return {
+                "query_status": "no_results",
+                "threat": "none",
+                "status": "clean",
+                "confidence": 0.0,
+                "provider": "MOCK_URLHAUS",
+                "cached": True
+            }
 
 class URLhausProvider(ThreatProvider):
     """

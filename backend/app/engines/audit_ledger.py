@@ -63,7 +63,8 @@ class AuditLedgerEngine:
         action_requested: Optional[str],
         action_executed: Optional[str],
         verification: Optional[str],
-        details: Dict[str, Any]
+        details: Dict[str, Any],
+        merchant_id: str = "default"
     ) -> AuditEvent:
         # Fetch the latest event to obtain previous_hash
         latest_event = db.query(AuditEvent).order_by(AuditEvent.id.desc()).first()
@@ -83,25 +84,30 @@ class AuditLedgerEngine:
             previous_hash=prev_hash
         )
 
-        event = AuditEvent(
-            event_id=event_id,
-            actor=actor,
-            agent_decision=decision,
-            risk_score=risk_score,
-            policy_evaluated=policy,
-            tool_used=tool,
-            action_requested=action_requested,
-            action_executed=action_executed,
-            verification_result=verification,
-            previous_hash=prev_hash,
-            current_hash=curr_hash,
-            details=details,
-            created_at=datetime.now(timezone.utc)
-        )
-        db.add(event)
-        db.commit()
-        db.refresh(event)
-        return event
+        from app.core.telemetry import trace_span
+
+        with trace_span("audit.ledger.append", {"event_id": event_id, "merchant_id": merchant_id, "risk_score": float(risk_score)}):
+            event = AuditEvent(
+                event_id=event_id,
+                merchant_id=merchant_id,
+                actor=actor,
+                agent_decision=decision,
+                risk_score=risk_score,
+                policy_evaluated=policy,
+                tool_used=tool,
+                action_requested=action_requested,
+                action_executed=action_executed,
+                verification_result=verification,
+                details=details,
+                previous_hash=prev_hash,
+                current_hash=curr_hash,
+                created_at=datetime.now(timezone.utc)
+            )
+
+            db.add(event)
+            db.commit()
+            db.refresh(event)
+            return event
 
     @classmethod
     def verify_chain_integrity(cls, db: Session) -> Dict[str, Any]:

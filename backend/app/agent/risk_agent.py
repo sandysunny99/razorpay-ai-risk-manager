@@ -39,6 +39,17 @@ class RiskManagerAgent:
         merchant_id: Optional[str] = None,
         simulate_step_up: bool = False
     ) -> InvestigationResponse:
+        from app.core.telemetry import trace_span
+
+        with trace_span("risk.agent.evaluate", {"transaction.id": txn_id, "merchant.id": merchant_id or "default"}):
+            return await self._execute_investigation(txn_id, merchant_id, simulate_step_up)
+
+    async def _execute_investigation(
+        self,
+        txn_id: str,
+        merchant_id: Optional[str] = None,
+        simulate_step_up: bool = False
+    ) -> InvestigationResponse:
         timeline: List[InvestigationStep] = []
         tools_requested: List[str] = []
         tools_executed: List[str] = []

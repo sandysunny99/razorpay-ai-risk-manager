@@ -11,9 +11,14 @@ import { LiveRiskTable } from './components/LiveRiskTable';
 import { ZombieCardSaverView } from './components/ZombieCardSaverView';
 import { SecurityCenter } from './components/SecurityCenter';
 import { CardExposureOverview } from './components/CardExposureOverview';
+import { ThreatFeedPanel } from './components/ThreatFeedPanel';
+import { CommandPalette } from './components/CommandPalette';
+import { ShortcutsHelpModal } from './components/ShortcutsHelpModal';
+import { RiskHeatmap } from './components/RiskHeatmap';
 import { ToastContainer } from './components/ToastContainer';
 import { TableSkeleton } from './components/Skeleton';
 import { useToast } from './hooks/useToast';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { api, setApiErrorListener } from './services/api';
 import {
   OverviewMetrics,
@@ -28,6 +33,7 @@ import {
 
 type TabType =
   | 'timeline'
+  | 'heatmap'
   | 'zombie-saver'
   | 'evaluation'
   | 'liverisk'
@@ -50,6 +56,11 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isAgentRunning, setIsAgentRunning] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>('timeline');
+
+  // Interactive SOC overlays
+  const [isThreatFeedOpen, setIsThreatFeedOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState<boolean>(false);
 
   const { toasts, addToast, dismissToast } = useToast();
 
@@ -171,6 +182,24 @@ export function App() {
     }
   };
 
+  const handleInvestigateTxn = async (txnId: string) => {
+    setIsAgentRunning(true);
+    try {
+      const result = await api.triggerInvestigation(txnId);
+      setInvestigation(result);
+      setActiveTab('timeline');
+      addToast({
+        type: 'info',
+        title: 'Transaction Investigation',
+        message: `Evaluating multi-factor risk for ${txnId}.`,
+      });
+    } catch (err: any) {
+      console.error('Investigation failed:', err);
+    } finally {
+      setIsAgentRunning(false);
+    }
+  };
+
   const handleResetData = async () => {
     setIsLoading(true);
     try {
@@ -190,7 +219,8 @@ export function App() {
   };
 
   const tabs: { id: TabType; label: string; count?: number; isLive?: boolean }[] = [
-    { id: 'timeline', label: 'Agent Investigation', count: investigation ? 1 : undefined },
+    { id: 'timeline', label: 'Forensic Timeline', count: investigation ? 1 : undefined },
+    { id: 'heatmap', label: 'Risk Heatmap Matrix' },
     { id: 'zombie-saver', label: 'Zombie Card Saver', count: zombies.length },
     { id: 'liverisk', label: 'Live Screening Stream', isLive: true },
     { id: 'cards', label: 'Cards & Vault', count: cards.length },
@@ -201,16 +231,62 @@ export function App() {
     { id: 'evaluation', label: 'Model Evaluation' },
   ];
 
+  // Hotkey handlers (TASK 3E)
+  useKeyboardShortcuts({
+    onOpenCommandPalette: () => setIsCommandPaletteOpen((prev) => !prev),
+    onGoldenDemo: () => handleTriggerScenario('golden_compromise'),
+    onResetDemo: handleResetData,
+    onCloseModals: () => {
+      setIsCommandPaletteOpen(false);
+      setIsShortcutsHelpOpen(false);
+      setIsThreatFeedOpen(false);
+    },
+    onSwitchTab: (idx: number) => {
+      if (tabs[idx]) setActiveTab(tabs[idx].id);
+    },
+    onToggleShortcutsHelp: () => setIsShortcutsHelpOpen((prev) => !prev),
+  });
+
+  const globalScore = investigation?.initial_risk || 82;
+
   return (
     <div className="min-h-screen bg-[#081220] text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white relative">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Top Header */}
+      {/* Slide-out Threat Feed Panel (TASK 3A) */}
+      <ThreatFeedPanel
+        isOpen={isThreatFeedOpen}
+        onToggle={() => setIsThreatFeedOpen((prev) => !prev)}
+        onSelectCard={handleInvestigateCard}
+      />
+
+      {/* Centered Command Palette Modal (TASK 3F) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        cards={cards}
+        scenarios={scenarios}
+        zombies={zombies}
+        auditEvents={auditEvents}
+        onSelectCard={handleInvestigateCard}
+        onSelectScenario={handleTriggerScenario}
+      />
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <ShortcutsHelpModal
+        isOpen={isShortcutsHelpOpen}
+        onClose={() => setIsShortcutsHelpOpen(false)}
+      />
+
+      {/* Top Header with Global Threat Level Bar (TASK 3D) */}
       <Header
         onRefresh={fetchAllData}
         isLoading={isLoading}
         systemStatus={metrics?.system_status || 'OPERATIONAL'}
         dryRun={metrics?.dry_run_mode ?? true}
+        globalThreatScore={globalScore}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsHelpOpen(true)}
       />
 
       {/* Main Container */}
@@ -226,7 +302,7 @@ export function App() {
           isRunning={isAgentRunning}
         />
 
-        {/* Pill-Style Tab Navigation (F.3.2) */}
+        {/* Pill-Style Tab Navigation */}
         <nav className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-800/80 scrollbar-none">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -267,6 +343,10 @@ export function App() {
           <InvestigationTimeline investigation={investigation} />
         )}
 
+        {activeTab === 'heatmap' && (
+          <RiskHeatmap onSelectTransaction={handleInvestigateTxn} />
+        )}
+
         {activeTab === 'zombie-saver' && <ZombieCardSaverView />}
 
         {activeTab === 'security' && <SecurityCenter />}
@@ -302,8 +382,15 @@ export function App() {
       <footer className="border-t border-slate-900 bg-[#060D17] py-6 px-6 text-center text-xs text-slate-500">
         <p>
           Razorpay AI Buildathon 2026 • Track:{' '}
-          <span className="text-slate-300 font-medium">AI Risk Manager</span> • Built with
-          HMAC-SHA-256 PAN Fingerprinting &amp; PCI-Aware Security Design
+          <span className="text-slate-300 font-medium">AI Risk Manager</span> • Press{' '}
+          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-blue-300">
+            ?
+          </kbd>{' '}
+          for keyboard shortcuts or{' '}
+          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-blue-300">
+            ⌘K
+          </kbd>{' '}
+          for command palette.
         </p>
       </footer>
     </div>

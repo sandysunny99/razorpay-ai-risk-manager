@@ -1,7 +1,7 @@
 
 import pytest
 
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import Base, SessionLocal, engine, init_db
 from app.db.seed_data import seed_initial_data
 from app.models.entities import Card, PaymentToken, Transaction
 from app.zombie_card_saver.detector import zombie_detector
@@ -14,7 +14,7 @@ from app.zombie_card_saver.severity import zombie_severity_classifier
 
 @pytest.fixture
 def db():
-    Base.metadata.create_all(bind=engine)
+    init_db()
     session = SessionLocal()
     seed_initial_data(session)
     yield session
