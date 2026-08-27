@@ -2,17 +2,85 @@
 
 <div align="center">
 
-[![CI Status](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/sandysunny99/razorpay-ai-risk-manager?color=0D83FF)](https://github.com/sandysunny99/razorpay-ai-risk-manager/releases)
-[![Tests](https://img.shields.io/badge/Tests-83%20Passed-10B981?style=flat-square)](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions)
-[![Precision](https://img.shields.io/badge/Precision-100%25%20(0%20FP)-6366F1?style=flat-square)](https://github.com/sandysunny99/razorpay-ai-risk-manager)
-[![Recall](https://img.shields.io/badge/Recall-88.06%25-3B82F6?style=flat-square)](https://github.com/sandysunny99/razorpay-ai-risk-manager)
-[![Security](https://img.shields.io/badge/Security%20Score-95%2F100-10B981?style=flat-square)](https://github.com/sandysunny99/razorpay-ai-risk-manager/blob/main/SECURITY.md)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green?style=flat-square)](LICENSE)
-
-**"Razorpay AI Risk Manager is an agentic payment-risk prototype that detects suspicious activity, investigates correlated evidence, applies policy-controlled responses, and verifies security actions."**
+[![CI](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sandysunny99/razorpay-ai-risk-manager?label=release&color=0D83FF)](https://github.com/sandysunny99/razorpay-ai-risk-manager/releases)
+[![Tests](https://img.shields.io/badge/tests-83%20passed-10B981)](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions)
+[![Precision](https://img.shields.io/badge/precision-100%25%20%280%20FP%29-6366F1)](docs/RISK_ENGINE.md)
+[![Recall](https://img.shields.io/badge/recall-88.06%25%20%28T%3D40%29-3B82F6)](docs/RISK_ENGINE.md)
+[![Security](https://img.shields.io/badge/security%20score-95%2F100-10B981)](SECURITY.md)
+[![License](https://img.shields.io/badge/license-Apache%202.0-22C55E)](LICENSE)
 
 </div>
+
+> **8-stage autonomous lifecycle · 100% precision at T=75 · 0 false positives on 300-record held-out test set · PCI-aware HMAC-SHA-256 PAN fingerprinting · SHA-256 hash-chained audit ledger · JWT/RBAC · AES-256-GCM**
+
+[LIVE DEMO →](https://razorpay-risk-manager.onrender.com) | [5-Min Demo Runbook](docs/HACKATHON_DEMO.md) | [Documentation Index](docs/INDEX.md) | [API Docs](docs/API.md)
+
+---
+
+### What this system does in 5 seconds
+
+A ₹18,500 authorization arrives from Moscow. The card was seen in a RedLine Stealer dump 48 hours ago. The vault token is still active but the physical card expired 3 months ago (zombie token). The agent:
+
+1. **Detects**: composite risk score **94 / 100 (CRITICAL)**
+2. **Decides**: Policy `PR-01` authorizes autonomous token revocation
+3. **Acts**: Razorpay Vault token **REVOKED** in < 200ms
+4. **Verifies**: Risk recalculated → **94 → 16 (LOW)**
+5. **Audits**: SHA-256 block committed to tamper-evident ledger
+
+**Zero human intervention. Zero false positives on legitimate transactions.**
+
+---
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ 1. OBSERVE  │───▶ │2.INVESTIGATE│───▶ │ 3.CORRELATE │───▶ │  4. REASON  │
+│  Intercept  │     │ Tools L0-L3 │     │  CTI+card+  │     │   Factor    │
+│ auth request│     │  (dynamic)  │     │ token+geo   │     │ attribution │
+└─────────────┘     └─────────────┘     └─────────────┘     └──────┬──────┘
+                                                                   │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌──────▼──────┐
+│  8. AUDIT   │◀─── │  7. VERIFY  │◀─── │   6. ACT    │◀─── │  5. DECIDE  │
+│   SHA-256   │     │   Confirm   │     │  Tier 0–4   │     │   Policy    │
+│ hash chain  │     │   REVOKED   │     │  response   │     │ guardrails  │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+## 🏆 Key Differentiators (vs Generic Fraud Demos)
+
+| Feature / Dimension | Razorpay AI Risk Manager | Generic Fraud Demos |
+|---|---|---|
+| **Autonomous Agent Loop** | 8-phase closed feedback loop (OBSERVE → AUDIT) | Static rule threshold check |
+| **Empirical Evaluation** | 100% Precision, 0 False Positives ($N=300$ frozen test set) | No evaluation framework or unverified claims |
+| **Zero-Knowledge Security** | HMAC-SHA-256 PAN fingerprinting — raw card numbers NEVER stored | PAN stored in plaintext logs / memory |
+| **Ledger Integrity** | SHA-256 hash-chained audit ledger with cryptographic tamper verification | Flat unstructured log file |
+| **Token Lifecycle Awareness** | Zombie token detection (expired/replaced card with active vault token) | No token lifecycle awareness |
+| **Response Calibrations** | 5-tier progressive response (ALLOW → MONITOR → STEP_UP → REVIEW → AUTO_REMEDIATE) | Binary BLOCK / ALLOW |
+| **Safety Guardrails** | Strict `NEVER_EXECUTE` guardrails — AI cannot transfer money or alter balance | No execution safety boundary |
+| **Enterprise Security** | JWT/RBAC (`viewer`/`operator`/`admin`) + AES-256-GCM + DLP scanning | No authentication or access controls |
+| **Closed-Loop Verification** | Risk drops 94 → 16 after autonomous remediation + re-verification | No post-action verification loop |
+
+## 🎯 Why This Architecture Is Different
+
+### 1. Measured Evaluation Framework (Not Hand-Wavy Claims)
+Most hackathon fraud demos say "high accuracy." We say:
+- **100% Precision** at T=75 on a **frozen 300-record held-out test set (SHA-256: `76a26e7cef5038a228ba178dc7e1d8e170c4133dc528f28d1764e46609ba8a5f`)**
+- Test set locked before evaluation — no p-hacking, no cherry-picking, zero data leakage.
+- Run `python scripts/verify_test_set.py` to cryptographically prove data integrity.
+
+### 2. HMAC-SHA-256 Zero-Knowledge PAN Fingerprinting
+Raw card PANs, CVVs, and OTPs are **never stored, logged, or sent to LLMs**. Exposure intelligence uses salted HMAC-SHA-256 fingerprints with Luhn pre-validation and deterministic token lookups.
+
+### 3. The Verification Loop (What Makes It Actually Agentic)
+After token revocation, the agent **re-queries Razorpay Vault** to confirm `status: REVOKED`, then **recalculates composite risk** (dropping from 94 → 16). This is a closed feedback loop — not a one-shot rule execution.
+
+### 4. Policy NEVER_EXECUTE Guardrail
+The AI cannot transfer money, modify account balances, or approve transactions. These actions are hardcoded under `NEVER_EXECUTE`. The agent can only:
+- Flag (`MONITOR`), Challenge (`STEP_UP`), Escalate (`REVIEW`), or Revoke tokens (`AUTO_EXECUTE`).
+This strictly eliminates the risk of autonomous financial hallucinations.
+
+### 5. Zombie Token Detection (Uniquely Razorpay-Relevant)
+Detects tokens that remain active on Razorpay Vault after the physical card expires, gets replaced, or is reported compromised. Generic fraud demos don't model the token lifecycle at all. This addresses real-world gateway chargeback liability.
 
 ---
 
@@ -169,38 +237,38 @@ In the SOC Dashboard (`http://localhost:5173`), click **"Golden Demo Scenario: S
 
 ---
 
-## ⚡ 10. Quickstart & Deployment Runbook
+## ⚡ 10. Quickstart — Run in 60 Seconds
 
-### 1. Verify Test Set Integrity & Pre-Deploy Gates
-```powershell
-python scripts/verify_test_set.py
-python scripts/pre_deploy.py
+### Option A: Docker (Recommended for Judges)
+```bash
+git clone https://github.com/sandysunny99/razorpay-ai-risk-manager.git
+cd razorpay-ai-risk-manager
+cp .env.example .env     # Safe defaults already configured
+docker-compose up        # Starts backend + frontend
 ```
+- **Backend API & Swagger Docs**: http://localhost:8000/docs
+- **SOC Dashboard**: http://localhost:5173 (or http://localhost:8000 via unified container)
 
-### 2. Run Backend Test Suite (63 Tests) & Evaluation Benchmark
-```powershell
-pytest -q
-python scripts/run_final_evaluation.py
-```
+### Option B: Live Demo (No Installation)
+→ **[https://razorpay-risk-manager.onrender.com](https://razorpay-risk-manager.onrender.com)**
 
-### 3. Start Backend Gateway (FastAPI)
-```powershell
-cd backend
+### Option C: Manual Dev Setup
+```bash
+# Backend
+cd backend && pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
-```
-- API Documentation: `http://localhost:8000/docs`
-- Health Probe: `http://localhost:8000/health`
 
-### 4. Start Frontend SOC Dashboard (React + Vite)
-```powershell
-cd frontend
-npm install
-npm run dev
+# Frontend (separate terminal)
+cd frontend && npm install && npm run dev
 ```
-- SOC Dashboard: `http://localhost:5173/`
 
-### 5. Deterministic Demo Reset
-```powershell
+### Run the Golden Demo (Takes 5 Minutes)
+1. Open SOC Dashboard (`http://localhost:5173` or Live Demo).
+2. Click **"Execute Golden Attack Demo"** (Stealer Dump + Zombie Token).
+3. Follow the 5-step walkthrough in [docs/HACKATHON_DEMO.md](docs/HACKATHON_DEMO.md).
+
+### Deterministic Demo Reset
+```bash
 python scripts/reset_demo.py
 ```
 

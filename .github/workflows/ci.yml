@@ -18,6 +18,12 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  PYTHONPATH: backend:.
+  APP_ENV: ${{ secrets.APP_ENV || 'testing' }}
+  DRY_RUN: ${{ secrets.DRY_RUN || 'true' }}
+  HMAC_SECRET_KEY: ${{ secrets.HMAC_SECRET_KEY || 'ci_test_hmac_secret_key_only_for_testing_2026' }}
+
 jobs:
   # ─────────────────────────────────────────────────────────────────────────
   # JOB 1: Static Analysis, Linting & Type Checking
@@ -81,7 +87,7 @@ jobs:
       PYTHONPATH: backend:.
       APP_ENV: testing
       DRY_RUN: "true"
-      HMAC_SECRET_KEY: "ci_test_hmac_secret_key_only_for_testing_2026"
+      HMAC_SECRET_KEY: ${{ secrets.HMAC_SECRET_KEY || 'ci_test_hmac_secret_key_only_for_testing_2026' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -109,7 +115,7 @@ jobs:
       PYTHONPATH: backend:.
       APP_ENV: testing
       DRY_RUN: "true"
-      HMAC_SECRET_KEY: "ci_test_hmac_secret_key_only_for_testing_2026"
+      HMAC_SECRET_KEY: ${{ secrets.HMAC_SECRET_KEY || 'ci_test_hmac_secret_key_only_for_testing_2026' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -136,7 +142,7 @@ jobs:
       PYTHONPATH: backend:.
       APP_ENV: testing
       DRY_RUN: "true"
-      HMAC_SECRET_KEY: "ci_test_hmac_secret_key_only_for_testing_2026"
+      HMAC_SECRET_KEY: ${{ secrets.HMAC_SECRET_KEY || 'ci_test_hmac_secret_key_only_for_testing_2026' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -165,7 +171,7 @@ jobs:
       PYTHONPATH: backend:.
       APP_ENV: testing
       DRY_RUN: "true"
-      HMAC_SECRET_KEY: "ci_test_hmac_secret_key_only_for_testing_2026"
+      HMAC_SECRET_KEY: ${{ secrets.HMAC_SECRET_KEY || 'ci_test_hmac_secret_key_only_for_testing_2026' }}
     steps:
       - uses: actions/checkout@v4
 

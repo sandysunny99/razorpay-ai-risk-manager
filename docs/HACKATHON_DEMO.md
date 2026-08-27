@@ -6,17 +6,21 @@ This guide outlines the exact 3-minute demonstration for judges and evaluators.
 
 ---
 
-### Step 1: Start the Application
+### Step 1: Access the Application
 
-1. **Terminal 1 (Backend Gateway)**:
-   ```bash
-   uvicorn app.main:app --app-dir backend --reload --port 8000
-   ```
-2. **Terminal 2 (SOC Dashboard)**:
-   ```bash
-   cd frontend && npm run dev
-   ```
-3. Open `http://localhost:5173` in your browser.
+- **Option A (Zero Setup — Live Cloud Demo)**:
+  → **[https://razorpay-risk-manager.onrender.com](https://razorpay-risk-manager.onrender.com)**
+
+- **Option B (One-Command Docker)**:
+  ```bash
+  docker-compose up
+  ```
+  Open `http://localhost:5173` (or `http://localhost:8000`).
+
+- **Option C (Manual Local Dev)**:
+  1. Terminal 1: `uvicorn app.main:app --app-dir backend --reload --port 8000`
+  2. Terminal 2: `cd frontend && npm run dev`
+  3. Open `http://localhost:5173` in your browser.
 
 ---
 

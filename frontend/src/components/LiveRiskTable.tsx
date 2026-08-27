@@ -38,12 +38,15 @@ export const LiveRiskTable: React.FC<LiveRiskTableProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-5 h-5 text-blue-400" />
-            <h3 className="text-lg font-bold text-white tracking-tight">
-              LIVE PAYMENT RISK SCREENING STREAM
+            <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+              RISK SCREENING STREAM
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                SIMULATION MODE
+              </span>
             </h3>
           </div>
           <p className="text-xs text-slate-400">
-            Real-time transaction stream correlated with CTI feeds, token state, and velocity
+            Transaction stream correlated with CTI feeds, token state, and velocity
           </p>
         </div>
 
@@ -56,6 +59,12 @@ export const LiveRiskTable: React.FC<LiveRiskTableProps> = ({
           <option value="validation.jsonl">Validation Stream (300 records)</option>
           <option value="train.jsonl">Training Stream (1,400 records)</option>
         </select>
+      </div>
+
+      {/* Simulation Mode Banner */}
+      <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-950/40 border border-amber-800/50 text-amber-300 text-xs font-mono">
+        <span>⚡</span>
+        <span>Demo environment — 5 deterministic golden scenarios. In production, events stream from Razorpay webhook endpoint.</span>
       </div>
 
       {loading ? (

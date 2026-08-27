@@ -222,7 +222,7 @@ export function App() {
     { id: 'timeline', label: 'Forensic Timeline', count: investigation ? 1 : undefined },
     { id: 'heatmap', label: 'Risk Heatmap Matrix' },
     { id: 'zombie-saver', label: 'Zombie Card Saver', count: zombies.length },
-    { id: 'liverisk', label: 'Live Screening Stream', isLive: true },
+    { id: 'liverisk', label: 'Risk Screening (Simulation)', isLive: true },
     { id: 'cards', label: 'Cards & Vault', count: cards.length },
     { id: 'cases', label: 'Security Cases', count: cases.length },
     { id: 'audit', label: 'Audit Ledger', count: auditEvents.length },
