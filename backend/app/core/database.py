@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.core.config import settings
@@ -14,18 +14,8 @@ Base = declarative_base()
 
 
 def init_db() -> None:
-    """Creates database schema and performs schema migrations for SQLite."""
+    """Creates database schema using Base metadata."""
     Base.metadata.create_all(bind=engine)
-    if "sqlite" in settings.DATABASE_URL:
-        with engine.connect() as conn:
-            try:
-                result = conn.execute(text("PRAGMA table_info(audit_events)"))
-                columns = [row[1] for row in result.fetchall()]
-                if columns and "merchant_id" not in columns:
-                    conn.execute(text("ALTER TABLE audit_events ADD COLUMN merchant_id VARCHAR(64) DEFAULT 'default'"))
-                    conn.commit()
-            except Exception:
-                pass
 
 
 def get_db():

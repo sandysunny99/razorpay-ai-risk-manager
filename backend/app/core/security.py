@@ -108,3 +108,21 @@ def sanitize_untrusted_input(data: str) -> str:
 def generate_correlation_id() -> str:
     """Generate a short random correlation ID for error tracking."""
     return secrets.token_hex(8).upper()
+
+def hash_password(password: str) -> str:
+    """Hashes a password using PBKDF2-HMAC-SHA256 with a cryptographically secure random salt."""
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return f"pbkdf2_sha256${salt}${key.hex()}"
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verifies a password against a stored PBKDF2-HMAC-SHA256 hash."""
+    try:
+        parts = hashed.split("$")
+        if len(parts) != 3 or parts[0] != "pbkdf2_sha256":
+            return False
+        _, salt, expected_key = parts
+        key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+        return hmac.compare_digest(key.hex(), expected_key)
+    except Exception:
+        return False

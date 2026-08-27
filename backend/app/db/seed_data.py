@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+from app.core.security import hash_password
 from app.models.entities import (
     Card,
     CloudflareSecurityEvent,
@@ -9,6 +10,7 @@ from app.models.entities import (
     ExposureEvent,
     PaymentToken,
     Transaction,
+    User,
 )
 from app.threat_intel.synthetic_provider import CLEAN_FP_1234, DEMO_FP_4921, VICTIM_FP_8820
 
@@ -216,4 +218,45 @@ def seed_initial_data(db: Session):
         edge_status="NORMAL"
     )
     db.add_all([cf1, cf2])
+
+    # 7. Default System Users (Admin, Analyst, Viewer, Merchant B)
+    if db.query(User).count() == 0:
+        u_admin = User(
+            user_id="usr_admin_01",
+            username="admin",
+            email="admin@riskmanager.razorpay.internal",
+            hashed_password=hash_password("AdminRisk@2026!"),
+            role="admin",
+            merchant_id="default",
+            is_active=True
+        )
+        u_analyst = User(
+            user_id="usr_analyst_01",
+            username="analyst",
+            email="analyst@riskmanager.razorpay.internal",
+            hashed_password=hash_password("AnalystRisk@2026!"),
+            role="operator",
+            merchant_id="default",
+            is_active=True
+        )
+        u_viewer = User(
+            user_id="usr_viewer_01",
+            username="viewer",
+            email="viewer@riskmanager.razorpay.internal",
+            hashed_password=hash_password("ViewerRisk@2026!"),
+            role="viewer",
+            merchant_id="default",
+            is_active=True
+        )
+        u_merchant_b = User(
+            user_id="usr_mer_b_01",
+            username="merchant_b_analyst",
+            email="analyst@merchantb.internal",
+            hashed_password=hash_password("MerchantB@2026!"),
+            role="operator",
+            merchant_id="merchant_b",
+            is_active=True
+        )
+        db.add_all([u_admin, u_analyst, u_viewer, u_merchant_b])
+
     db.commit()

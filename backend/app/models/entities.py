@@ -54,12 +54,12 @@ class PaymentToken(Base):
     token_id = Column(String(64), unique=True, index=True, nullable=False)
     card_id = Column(String(64), ForeignKey("cards.card_id"), nullable=False)
     customer_id = Column(String(64), ForeignKey("customers.customer_id"), nullable=False)
-    merchant_id = Column(String(64), default="DemoStore")
-    status = Column(String(32), default="ACTIVE")  # ACTIVE, REVOKED, SUSPENDED, ROTATED
+    merchant_id = Column(String(64), default="DemoStore", index=True)
+    status = Column(String(32), default="ACTIVE", index=True)  # ACTIVE, REVOKED, SUSPENDED, ROTATED
     token_age_days = Column(Integer, default=15)
     usage_count = Column(Integer, default=1)
     last_used_at = Column(DateTime, default=datetime.utcnow)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -68,17 +68,17 @@ class Transaction(Base):
     txn_id = Column(String(64), unique=True, index=True, nullable=False)
     customer_id = Column(String(64), ForeignKey("customers.customer_id"), nullable=False)
     card_id = Column(String(64), ForeignKey("cards.card_id"), nullable=False)
-    token_id = Column(String(64), nullable=True)
-    merchant_id = Column(String(64), default="DemoStore")
+    token_id = Column(String(64), nullable=True, index=True)
+    merchant_id = Column(String(64), default="DemoStore", index=True)
     amount = Column(Float, nullable=False)
     currency = Column(String(8), default="INR")
-    status = Column(String(32), default="PENDING")  # PENDING, SUCCESS, FLAGGED, BLOCKED, REFUNDED
+    status = Column(String(32), default="PENDING", index=True)  # PENDING, SUCCESS, FLAGGED, BLOCKED, REFUNDED
     ip_address = Column(String(64), default="127.0.0.1")
     location_city = Column(String(64), default="Bengaluru")
     location_country = Column(String(64), default="India")
     device_id = Column(String(64), default="dev_trusted_01")
     velocity_10m = Column(Integer, default=1)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 class ThreatSource(Base):
     __tablename__ = "threat_sources"
@@ -108,15 +108,15 @@ class RiskAssessment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     assessment_id = Column(String(64), unique=True, index=True, nullable=False)
-    transaction_id = Column(String(64), nullable=True)
-    card_id = Column(String(64), nullable=False)
-    token_id = Column(String(64), nullable=True)
+    transaction_id = Column(String(64), index=True, nullable=True)
+    card_id = Column(String(64), index=True, nullable=False)
+    token_id = Column(String(64), index=True, nullable=True)
     merchant_id = Column(String(64), default="default", index=True, nullable=False)
-    composite_score = Column(Float, nullable=False)  # 0 to 100
+    composite_score = Column(Float, nullable=False, index=True)  # 0 to 100
     severity = Column(String(32), nullable=False)  # LOW, MEDIUM, HIGH, CRITICAL
     factor_breakdown = Column(JSON, default=dict)
     recommendation = Column(Text, nullable=False)
-    calculated_at = Column(DateTime, default=datetime.utcnow)
+    calculated_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 class SecurityCase(Base):
     __tablename__ = "security_cases"
@@ -124,17 +124,17 @@ class SecurityCase(Base):
     id = Column(Integer, primary_key=True, index=True)
     case_id = Column(String(64), unique=True, index=True, nullable=False)
     severity = Column(String(32), default="CRITICAL")
-    card_id = Column(String(64), nullable=False)
+    card_id = Column(String(64), index=True, nullable=False)
     token_id = Column(String(64), nullable=True)
     customer_id = Column(String(64), nullable=False)
-    merchant_id = Column(String(64), default="DemoStore")
+    merchant_id = Column(String(64), default="DemoStore", index=True)
     risk_score = Column(Float, default=0.0)
     reason = Column(Text, nullable=False)
-    status = Column(String(32), default="OPEN")  # OPEN, INVESTIGATING, RESOLVED, DISMISSED
+    status = Column(String(32), default="OPEN", index=True)  # OPEN, INVESTIGATING, RESOLVED, DISMISSED
     assigned_to = Column(String(64), default="SOC Tier 2 - Automated Risk Agent")
     actions_taken = Column(JSON, default=list)
     timeline = Column(JSON, default=list)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class AuditEvent(Base):
@@ -194,6 +194,32 @@ class KeyMetadata(Base):
     key_id = Column(String(64), unique=True, index=True, nullable=False)
     version = Column(String(16), nullable=False)
     algorithm = Column(String(32), default="AES-256-GCM")
-    status = Column(String(32), default="ACTIVE")  # ACTIVE, RETIRED, REVOKED
-    created_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(String(32), default="ACTIVE", index=True)  # ACTIVE, RETIRED, REVOKED, EXPIRING_SOON
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(64), unique=True, index=True, nullable=False)
+    username = Column(String(64), unique=True, index=True, nullable=False)
+    email = Column(String(128), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(256), nullable=False)
+    role = Column(String(32), default="viewer", nullable=False)  # viewer, operator, admin
+    merchant_id = Column(String(64), default="default", index=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class WebhookEvent(Base):
+    __tablename__ = "webhook_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(String(128), unique=True, index=True, nullable=False)
+    merchant_id = Column(String(64), default="default", index=True, nullable=False)
+    event_type = Column(String(64), index=True, nullable=False)
+    payload_hash = Column(String(64), index=True, nullable=False)  # SHA-256 digest of raw body
+    signature = Column(String(128), nullable=True)
+    status = Column(String(32), default="PROCESSED", index=True)  # RECEIVED, PROCESSED, DUPLICATE_IGNORED, FAILED
+    received_at = Column(DateTime, default=datetime.utcnow, index=True)
+    processed_at = Column(DateTime, default=datetime.utcnow)
 

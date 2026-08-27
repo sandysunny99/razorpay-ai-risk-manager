@@ -1,15 +1,18 @@
 """
 Multi-Tenant Database Isolation & Row-Level Scoping Tests
 """
+import hashlib
 import uuid
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from app.core.database import Base
+from app.core.security import hash_password, verify_password
 from app.engines.audit_ledger import AuditLedgerEngine
-from app.models.entities import AuditEvent, RiskAssessment
+from app.models.entities import AuditEvent, RiskAssessment, User, WebhookEvent
 
 
 @pytest.fixture
@@ -137,3 +140,67 @@ def test_hash_chain_integrity_with_multi_tenant_blocks(test_db_session):
     assert verification["valid"] is True
     assert verification["total_events"] == 5
     assert len(verification["tampered_events"]) == 0
+
+
+def test_user_model_and_password_hashing(test_db_session):
+    """Verify User model creation, unique constraints, and password hash verification."""
+    db = test_db_session
+    raw_pw = "SecurePassword@2026!"
+    hashed = hash_password(raw_pw)
+
+    user = User(
+        user_id="usr_test_01",
+        username="soc_analyst",
+        email="analyst@soc.internal",
+        hashed_password=hashed,
+        role="operator",
+        merchant_id="merchant_test",
+        is_active=True
+    )
+    db.add(user)
+    db.commit()
+
+    retrieved = db.query(User).filter(User.username == "soc_analyst").first()
+    assert retrieved is not None
+    assert retrieved.email == "analyst@soc.internal"
+    assert retrieved.role == "operator"
+    assert retrieved.merchant_id == "merchant_test"
+    assert verify_password(raw_pw, retrieved.hashed_password) is True
+    assert verify_password("WrongPassword!", retrieved.hashed_password) is False
+
+
+def test_webhook_event_idempotency_table(test_db_session):
+    """Verify WebhookEvent table stores idempotency record and enforces event_id uniqueness."""
+    db = test_db_session
+    payload = b'{"event":"payment.authorized","id":"pay_test_01"}'
+    p_hash = hashlib.sha256(payload).hexdigest()
+
+    evt1 = WebhookEvent(
+        event_id="evt_test_unique_101",
+        merchant_id="merchant_test",
+        event_type="payment.authorized",
+        payload_hash=p_hash,
+        signature="sig_test_valid_hex",
+        status="PROCESSED"
+    )
+    db.add(evt1)
+    db.commit()
+
+    retrieved = db.query(WebhookEvent).filter(WebhookEvent.event_id == "evt_test_unique_101").first()
+    assert retrieved is not None
+    assert retrieved.payload_hash == p_hash
+    assert retrieved.status == "PROCESSED"
+
+    # Duplicate event_id must trigger IntegrityError
+    evt_dup = WebhookEvent(
+        event_id="evt_test_unique_101",
+        merchant_id="merchant_test",
+        event_type="payment.authorized",
+        payload_hash=p_hash,
+        signature="sig_test_valid_hex",
+        status="DUPLICATE_IGNORED"
+    )
+    db.add(evt_dup)
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
