@@ -29,12 +29,14 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 
 class Role(str, Enum):
     VIEWER = "viewer"       # Read-only SOC analyst
+    ANALYST = "analyst"     # L1 fraud analyst (investigate, view audit & CTI)
     OPERATOR = "operator"   # L1 analyst / demo trigger operator
-    ADMIN = "admin"         # L2 supervisor / system admin
+    ADMIN = "admin"         # L2 supervisor / system admin (configuration & destructive actions)
 
 
 _ROLE_HIERARCHY = {
     Role.VIEWER: 1,
+    Role.ANALYST: 2,
     Role.OPERATOR: 2,
     Role.ADMIN: 3,
 }
@@ -51,15 +53,24 @@ def _keys_match(provided: str, expected: str) -> bool:
 def create_access_token(
     subject: str,
     role: Role = Role.VIEWER,
+    merchant_id: str = "default",
+    email: Optional[str] = None,
     expires_delta: Optional[timedelta] = None,
 ) -> str:
-    """Creates a signed HMAC-SHA256 JWT access token with designated role."""
+    """
+    Creates a signed HMAC-SHA256 JWT access token.
+    Short-lived (default 30 min) per FinTech Zero-Trust standards.
+    """
     expire = datetime.now(timezone.utc) + (
-        expires_delta if expires_delta is not None else timedelta(hours=24)
+        expires_delta if expires_delta is not None else timedelta(minutes=30)
     )
+    role_val = role.value if isinstance(role, Role) else str(role)
     payload: Dict[str, Any] = {
         "sub": subject,
-        "role": role.value,
+        "username": subject,
+        "role": role_val,
+        "merchant_id": merchant_id,
+        "email": email or "",
         "exp": int(expire.timestamp()),
         "iat": int(datetime.now(timezone.utc).timestamp()),
     }
@@ -73,49 +84,110 @@ def decode_access_token(token: str) -> Dict[str, Any]:
     return dict(jwt.decode(token, secret, algorithms=["HS256"]))
 
 
+def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(_bearer_scheme),
+) -> Dict[str, Any]:
+    """
+    FastAPI dependency: extracts authenticated user claims from JWT.
+    Enforces token expiration and signature validity.
+    In DEMO / DRY_RUN mode, permits fallback if credentials are absent.
+    """
+    if credentials is None:
+        if settings.DRY_RUN or settings.APP_MODE == "demo":
+            return {
+                "sub": "demo-operator",
+                "username": "demo-operator",
+                "role": Role.OPERATOR.value,
+                "merchant_id": "default",
+            }
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        payload = decode_access_token(credentials.credentials)
+        return payload
+    except (JWTError, ValueError) as err:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from err
+
+
+def enforce_tenant_access(requested_merchant_id: Optional[str], user_claims: Dict[str, Any]) -> str:
+    """
+    Enforces merchant tenant boundary.
+    Merchants cannot query or mutate cross-tenant assets.
+    Admins are permitted global scope.
+    """
+    user_merchant = user_claims.get("merchant_id", "default")
+    user_role = user_claims.get("role", Role.VIEWER.value)
+
+    if user_role == Role.ADMIN.value:
+        return requested_merchant_id or user_merchant
+
+    if requested_merchant_id and requested_merchant_id != user_merchant:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied: Identity is scoped to merchant '{user_merchant}'.",
+        )
+    return user_merchant
+
+
 def verify_role(required_role: Role) -> Callable[..., Dict[str, Any]]:
     """
     FastAPI dependency factory enforcing minimum RBAC permission level.
-    In DEMO / DRY_RUN mode, permits requests with advisory warning if token absent.
+    When a token is provided, strictly enforces role hierarchy.
+    When credentials are None in DEMO/DRY_RUN mode, permits advisory access.
     """
     async def _role_dependency(
         credentials: Optional[HTTPAuthorizationCredentials] = Security(_bearer_scheme),
     ) -> Dict[str, Any]:
-        # Demo / DRY_RUN bypass mode
-        if settings.DRY_RUN or settings.APP_MODE == "demo":
-            if credentials is None:
-                return {"sub": "demo-operator", "role": required_role.value}
+        if credentials is not None:
             try:
                 payload = decode_access_token(credentials.credentials)
+                user_role_str = payload.get("role", Role.VIEWER.value)
+                user_role = Role(user_role_str)
+                if _ROLE_HIERARCHY.get(user_role, 0) < _ROLE_HIERARCHY.get(required_role, 0):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Insufficient permissions: requires {required_role.value} role.",
+                    )
                 return payload
-            except JWTError:
-                logger.warning("AUTH_WARN: Invalid JWT provided in demo mode; allowing demo access.")
-                return {"sub": "demo-operator", "role": required_role.value}
+            except HTTPException:
+                raise
+            except (JWTError, ValueError) as err:
+                if not (settings.DRY_RUN or settings.APP_MODE == "demo"):
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid or expired authentication token.",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    ) from err
+                logger.warning("AUTH_WARN: Invalid JWT in demo mode; allowing default demo access.")
+                return {
+                    "sub": "demo-operator",
+                    "username": "demo-operator",
+                    "role": required_role.value,
+                    "merchant_id": "default",
+                }
 
-        # Production enforcement
-        if credentials is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication credentials required.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        # No credentials provided
+        if settings.DRY_RUN or settings.APP_MODE == "demo":
+            return {
+                "sub": "demo-operator",
+                "username": "demo-operator",
+                "role": required_role.value,
+                "merchant_id": "default",
+            }
 
-        try:
-            payload = decode_access_token(credentials.credentials)
-            user_role_str = payload.get("role", Role.VIEWER.value)
-            user_role = Role(user_role_str)
-            if _ROLE_HIERARCHY.get(user_role, 0) < _ROLE_HIERARCHY.get(required_role, 0):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Insufficient permissions: requires {required_role.value} role.",
-                )
-            return payload
-        except (JWTError, ValueError) as err:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired authentication token.",
-                headers={"WWW-Authenticate": "Bearer"},
-            ) from err
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return _role_dependency
 

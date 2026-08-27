@@ -29,6 +29,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.api.routes_audit import router as audit_router
+from app.api.routes_auth import router as auth_router
 from app.api.routes_cards import router as cards_router
 from app.api.routes_cases import router as cases_router
 from app.api.routes_demo import router as demo_router
@@ -207,6 +208,7 @@ app.add_middleware(
 
 # ─── API Routers ───────────────────────────────────────────────────────────
 app.include_router(health_router)
+app.include_router(auth_router)
 app.include_router(risk_router,       prefix=settings.API_V1_STR)
 app.include_router(cards_router,      prefix=settings.API_V1_STR)
 app.include_router(tokens_router,     prefix=settings.API_V1_STR)
