@@ -212,7 +212,7 @@ Security is structured as a defense-in-depth perimeter:
 
 ## 🎬 8. 5-Minute Golden Demo Runbook
 
-In the SOC Dashboard (`http://localhost:5173`), click **"Golden Demo Scenario: Stealer Dump + Zombie Token"**:
+In the SOC Dashboard ([Live Demo](https://razorpay-risk-manager.onrender.com) or `http://localhost:5173`), click **"Execute Golden Attack Demo"**:
 
 1. **00:00 - 00:30 (Problem & Overview)**: Present SOC dashboard telemetry and the dual-threshold architecture.
 2. **00:30 - 01:30 (Suspicious Transaction)**: Customer `1042` attempts a ₹18,500 authorization from Moscow. Velocity: 4 attempts.
