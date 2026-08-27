@@ -7,6 +7,7 @@
 - [Final Project Audit](FINAL_PROJECT_AUDIT.md)
 
 ## Technical Documentation
+- [Forensic Architecture Audit](FORENSIC_ARCHITECTURE_AUDIT.md) ← **PRE-HARDENING AUDIT**
 - [Architecture Overview](ARCHITECTURE.md)
 - [Risk Engine Design](RISK_ENGINE.md)
 - [Policy Engine](POLICY_ENGINE.md)
