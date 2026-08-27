@@ -19,3 +19,5 @@ psycopg2-binary>=2.9.0
 gunicorn>=22.0.0
 # ── Razorpay Test API Integration ──
 razorpay>=1.4.2
+# ── Phase 5: Production JWT / RBAC ──
+python-jose[cryptography]>=3.3.0
