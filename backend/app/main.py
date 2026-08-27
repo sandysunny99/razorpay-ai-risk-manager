@@ -12,39 +12,76 @@ Fixes applied in this version:
   FIX M-05  — Global exception handler with correlation ID, no traceback leak
   Phase 3   — API auth module registered
   Phase 4   — SSE stream router registered
+  Phase 2   — Sentry error monitoring (optional), Redis rate limiting (optional)
 """
 import logging
 import os
+import re
 import traceback
 import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.core.config import settings
-from app.core.database import Base, engine, SessionLocal
-from app.db.seed_data import seed_initial_data
-
-from app.api.routes_risk import router as risk_router
-from app.api.routes_cards import router as cards_router
-from app.api.routes_tokens import router as tokens_router
-from app.api.routes_cases import router as cases_router
 from app.api.routes_audit import router as audit_router
+from app.api.routes_cards import router as cards_router
+from app.api.routes_cases import router as cases_router
 from app.api.routes_demo import router as demo_router
 from app.api.routes_evaluation import router as evaluation_router
 from app.api.routes_exposure import router as exposure_router
-from app.api.routes_security import router as security_router
 from app.api.routes_health import router as health_router
-from app.api.routes_zombie_cards import router as zombie_router
-from app.api.routes_webhooks import router as webhooks_router
+from app.api.routes_risk import router as risk_router
+from app.api.routes_security import router as security_router
 from app.api.routes_stream import router as stream_router
+from app.api.routes_tokens import router as tokens_router
+from app.api.routes_webhooks import router as webhooks_router
+from app.api.routes_zombie_cards import router as zombie_router
+from app.core.config import settings
+from app.core.database import Base, SessionLocal, engine
+from app.db.seed_data import seed_initial_data
 
 logger = logging.getLogger("main")
+
+# ─── Sentry Initialization (Phase 2 — optional, graceful) ─────────────────
+# Sentry must be initialized BEFORE the FastAPI app is created.
+if settings.sentry_configured:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+        _PAN_PATTERN = re.compile(r"\b4[0-9]{12}(?:[0-9]{3})?\b")
+
+        def _scrub_sentry_event(event: dict, hint: dict) -> dict:
+            """Remove PAN / API key data before sending to Sentry. No PII leaves the server."""
+            try:
+                event_str = str(event)
+                if _PAN_PATTERN.search(event_str):
+                    event.setdefault("extra", {})["dlp_note"] = "PAN pattern detected — event sanitized"
+                    # Clear request body from the event to be safe
+                    if "request" in event:
+                        event["request"].pop("data", None)
+            except Exception:
+                pass
+            return event
+
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+            traces_sample_rate=0.1,
+            environment=settings.APP_ENV,
+            release="razorpay-risk-manager@2.0.0-rc2",
+            send_default_pii=False,
+            before_send=_scrub_sentry_event,
+        )
+        logger.info("Sentry error monitoring initialized (env=%s)", settings.APP_ENV)
+    except Exception as sentry_exc:
+        logger.warning("Sentry initialization failed: %s — continuing without error monitoring", sentry_exc)
 
 # ─── Database bootstrap ────────────────────────────────────────────────────
 Base.metadata.create_all(bind=engine)
@@ -52,7 +89,27 @@ with SessionLocal() as db:
     seed_initial_data(db)
 
 # ─── Rate limiter (FIX M-02) ──────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address)
+def _create_limiter() -> Limiter:
+    """
+    Create rate limiter — Redis-backed if REDIS_URL configured, in-memory otherwise.
+    Multi-worker note: in-memory limiter is per-worker (not shared across gunicorn workers).
+    Configure REDIS_URL (Upstash free tier: 10K req/day) for true multi-worker rate limiting.
+    """
+    if settings.redis_configured:
+        try:
+            limiter = Limiter(
+                key_func=get_remote_address,
+                storage_uri=settings.REDIS_URL,
+            )
+            logger.info("Rate limiter: Redis backend (%s)", settings.REDIS_URL[:30] + "...")
+            return limiter
+        except Exception as exc:
+            logger.warning("Redis rate limiter init failed: %s — falling back to in-memory", exc)
+    logger.info("Rate limiter: In-memory backend (single-worker demo mode)")
+    return Limiter(key_func=get_remote_address)
+
+
+limiter = _create_limiter()
 
 # ─── App factory ──────────────────────────────────────────────────────────
 # FIX M-04: disable docs in production

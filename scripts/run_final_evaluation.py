@@ -1,12 +1,13 @@
-import os
-import sys
 import hashlib
 import json
+import os
+import sys
 
 # Add backend directory to python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../backend")))
-from app.evaluation.evaluator import ModelEvaluator
 from app.evaluation.error_analysis import run_error_analysis
+from app.evaluation.evaluator import ModelEvaluator
+
 
 def main():
     print("=" * 70)
@@ -27,7 +28,7 @@ def main():
             if hashlib.sha256(crlf_bytes).hexdigest() == expected_hash:
                 current_hash = expected_hash
 
-    print(f"\n[1] TEST SET IMMUTABILITY CHECK:")
+    print("\n[1] TEST SET IMMUTABILITY CHECK:")
     print(f"    Target File: {test_path}")
     print(f"    Current SHA-256:  {current_hash}")
     print(f"    Expected SHA-256: {expected_hash}")
@@ -58,7 +59,7 @@ def main():
     print(f"    False Negative Rate:   {metrics['fnr']*100:.2f}%")
     print(f"    Expected Cost (INR):   INR {metrics['expected_cost']:,.2f}")
 
-    print(f"\n[3] ERROR DIAGNOSTICS & FALSE NEGATIVE MISSES:")
+    print("\n[3] ERROR DIAGNOSTICS & FALSE NEGATIVE MISSES:")
     for cat, count in errors.get("miss_categories", {}).items():
         print(f"    - {cat}: {count} cases")
 
@@ -74,7 +75,7 @@ def main():
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2)
 
-    print(f"\n[4] REPORT SAVED:")
+    print("\n[4] REPORT SAVED:")
     print(f"    JSON Report: {report_path}")
     print("=" * 70)
 

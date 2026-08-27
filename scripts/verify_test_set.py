@@ -2,6 +2,7 @@ import hashlib
 import os
 import sys
 
+
 def verify_test_set():
     test_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../evaluation/test.jsonl"))
     hash_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../docs/TEST_SET_HASH.txt"))
@@ -23,7 +24,7 @@ def verify_test_set():
             if hashlib.sha256(crlf_bytes).hexdigest() == expected_hash:
                 current_hash = expected_hash
 
-    print(f"Checking test set integrity...")
+    print("Checking test set integrity...")
     print(f"Target: {test_path}")
     print(f"Expected SHA-256: {expected_hash}")
     print(f"Computed SHA-256: {current_hash}")

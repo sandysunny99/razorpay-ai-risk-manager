@@ -1,11 +1,13 @@
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
-from app.models.entities import PaymentToken, Card
-from app.models.schemas import TokenResponse, ZombieTokenAlert
 from app.engines.token_risk import TokenRiskEngine
 from app.integrations.razorpay_adapter import RazorpayPaymentAdapter
+from app.models.entities import Card, PaymentToken
+from app.models.schemas import TokenResponse, ZombieTokenAlert
 
 router = APIRouter(prefix="/tokens", tags=["Tokens"])
 token_engine = TokenRiskEngine()
@@ -46,7 +48,7 @@ async def revoke_token_endpoint(token_id: str, db: Session = Depends(get_db)):
     tok = db.query(PaymentToken).filter(PaymentToken.token_id == token_id).first()
     if not tok:
         raise HTTPException(status_code=404, detail=f"Token '{token_id}' not found")
-    
+
     result = await razorpay.revoke_payment_token(token_id)
     tok.status = "REVOKED"
     db.commit()

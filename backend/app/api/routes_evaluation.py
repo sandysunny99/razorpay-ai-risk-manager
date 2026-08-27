@@ -1,5 +1,7 @@
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List
+
 from fastapi import APIRouter, Query
+
 from app.evaluation.evaluator import ModelEvaluator
 
 router = APIRouter(prefix="/evaluation", tags=["Model Evaluation & Metrics"])
@@ -40,7 +42,7 @@ def list_evaluation_transactions(
     records = evaluator.load_dataset(split=split)
     total = len(records)
     sliced = records[offset:offset+limit]
-    
+
     scored_items = []
     for r in sliced:
         score = evaluator.predict_record(r, model_type="full")
@@ -76,10 +78,10 @@ def get_policy_tier_distribution(
     from app.engines.policy_engine import PolicyEngine
     policy = PolicyEngine()
     records = evaluator.load_dataset(split=split)
-    
+
     tier_counts = {"LOW": 0, "MONITOR": 0, "STEP_UP": 0, "REVIEW": 0, "AUTO_REMEDIATE": 0}
     action_counts = {}
-    
+
     for r in records:
         score = evaluator.predict_record(r, model_type="full")
         tier_info = policy.classify_risk_tier(score, context=r)

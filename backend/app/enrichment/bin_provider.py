@@ -1,7 +1,9 @@
-import time
-import httpx
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+import time
+from typing import Any, Dict
+
+import httpx
+
 
 class BinProvider(ABC):
     @abstractmethod

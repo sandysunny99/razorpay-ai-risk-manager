@@ -1,10 +1,9 @@
-import os
 import json
-from typing import Dict, Any, List, Optional
+import os
+from typing import Any, Dict, List, Optional
+
 from app.engines.risk_scorer import RiskScoringEngine
-from app.engines.transaction_risk import TransactionRiskEngine
-from app.engines.card_risk import CardRiskEngine
-from app.engines.token_risk import TokenRiskEngine
+
 
 class ModelEvaluator:
     """
@@ -29,7 +28,7 @@ class ModelEvaluator:
         path = os.path.join(self.dataset_dir, split)
         if not os.path.exists(path):
             raise FileNotFoundError(f"Evaluation dataset file not found at: {path}")
-        
+
         records = []
         with open(path, "r", encoding="utf-8") as f:
             for line in f:

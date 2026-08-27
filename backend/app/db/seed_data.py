@@ -1,12 +1,17 @@
 from datetime import datetime, timedelta, timezone
+
 from sqlalchemy.orm import Session
+
 from app.models.entities import (
-    Customer, Card, PaymentToken, Transaction, ThreatSource,
-    ExposureEvent, SecurityCase, AuditEvent, CloudflareSecurityEvent
+    Card,
+    CloudflareSecurityEvent,
+    Customer,
+    ExposureEvent,
+    PaymentToken,
+    Transaction,
 )
-from app.threat_intel.synthetic_provider import (
-    DEMO_FP_4921, VICTIM_FP_8820, LOW_CONF_FP_1099, CLEAN_FP_1234
-)
+from app.threat_intel.synthetic_provider import CLEAN_FP_1234, DEMO_FP_4921, VICTIM_FP_8820
+
 
 def seed_initial_data(db: Session):
     """Seed comprehensive initial test data for all demo scenarios."""

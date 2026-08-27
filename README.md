@@ -118,7 +118,7 @@ Security is structured as a defense-in-depth perimeter:
 | **False Positive Rate (FPR)** | **0.00%** ($0.0000$) | **0.00%** ($0.0000$) | **Zero Legitimate Disruption in Test Set** |
 | **F1 Score** | **0.9365** | **0.6863** | **Optimal Threshold Balance** |
 | **Illustrative Expected Cost** | **₹40,000** | **₹160,000** | **₹120,000 Illustrative Reduction ($75\%$ drop)** |
-| **Automated Backend Tests** | **54 / 54 Passed (100%)** | Pytest Unit, Security, DLP, IDOR, Audit | **ALL PASS (1.88s)** |
+| **Automated Backend Tests** | **63 / 63 Passed (100%)** | Pytest Unit, Security, DLP, IDOR, Audit | **ALL PASS (1.88s)** |
 
 *Cost assumptions for illustrative model: $C_{FP} = ₹100$, $C_{FN} = ₹5,000$.*
 
@@ -159,7 +159,7 @@ python scripts/verify_test_set.py
 python scripts/pre_deploy.py
 ```
 
-### 2. Run Backend Test Suite (54 Tests) & Evaluation Benchmark
+### 2. Run Backend Test Suite (63 Tests) & Evaluation Benchmark
 ```powershell
 pytest -q
 python scripts/run_final_evaluation.py
@@ -216,3 +216,20 @@ python scripts/reset_demo.py
 - [docs/CARD_EXPOSURE_ARCHITECTURE.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CARD_EXPOSURE_ARCHITECTURE.md) - Card Exposure Architecture & HMAC Threat Correlation
 - [docs/CRYPTOGRAPHIC_DATA_PROTECTION.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/CRYPTOGRAPHIC_DATA_PROTECTION.md) - Cryptographic Data Protection & Key Management
 - [docs/DEMO_RUNBOOK.md](file:///c:/Users/sunny/Downloads/RAZAORPAY%20AI/docs/DEMO_RUNBOOK.md) - Step-by-step live demo presentation runbook
+
+## 🌐 Optional Free API Integrations
+
+All integrations degrade gracefully — the demo works with **zero configuration**.
+Real API keys enhance risk scoring with live data when available.
+
+| API | Use Case | Free Tier | Setup |
+|-----|----------|-----------|-------|
+| ip-api.com | Real geo-deviation scoring | 45 req/min, no auth | Auto-enabled (ENABLE_IP_GEO=true) |
+| Have I Been Pwned v3 | Dark web breach correlation | Unlimited* | Set HIBP_API_KEY |
+| AbuseIPDB | IP reputation scoring | 1,000/day | Set ABUSEIPDB_API_KEY |
+| Upstash Redis | Multi-worker rate limiting | 10K req/day | Set REDIS_URL |
+| Sentry | Error monitoring | 5K events/month | Set SENTRY_DSN |
+| Neon / Render PostgreSQL | Persistent database | 512MB free | Set DATABASE_URL |
+
+See [.env.example](.env.example) for full configuration details.
+

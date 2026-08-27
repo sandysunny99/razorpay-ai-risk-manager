@@ -1,17 +1,19 @@
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
-from app.models.entities import Transaction, Card, PaymentToken, Customer, Merchant, SecurityCase, AuditEvent
-from app.threat_intel.base import ThreatIntelProvider
-from app.engines.transaction_risk import TransactionRiskEngine
-from app.engines.card_risk import CardRiskEngine
-from app.engines.token_risk import TokenRiskEngine
-from app.engines.exposure_correlation import ExposureCorrelationEngine
-from app.engines.risk_scorer import RiskScoringEngine
-from app.engines.policy_engine import PolicyEngine
-from app.engines.verification_engine import VerificationEngine
-from app.integrations.razorpay_adapter import RazorpayPaymentAdapter
 
 from app.engines.audit_ledger import AuditLedgerEngine
+from app.engines.card_risk import CardRiskEngine
+from app.engines.exposure_correlation import ExposureCorrelationEngine
+from app.engines.policy_engine import PolicyEngine
+from app.engines.risk_scorer import RiskScoringEngine
+from app.engines.token_risk import TokenRiskEngine
+from app.engines.transaction_risk import TransactionRiskEngine
+from app.engines.verification_engine import VerificationEngine
+from app.integrations.razorpay_adapter import RazorpayPaymentAdapter
+from app.models.entities import AuditEvent, Card, Customer, PaymentToken, SecurityCase, Transaction
+from app.threat_intel.base import ThreatIntelProvider
+
 
 class ToolImpact:
     READ_ONLY = "READ_ONLY"
@@ -63,7 +65,7 @@ class AgentToolRegistry:
         self.db = db
         self.threat_provider = threat_provider
         self.razorpay_adapter = razorpay_adapter
-        
+
         self.txn_engine = TransactionRiskEngine()
         self.card_engine = CardRiskEngine()
         self.token_engine = TokenRiskEngine()

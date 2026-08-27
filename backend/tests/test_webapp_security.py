@@ -1,21 +1,30 @@
-import pytest
 from fastapi.testclient import TestClient
+import pytest
+
+from app.integrations.cloudflare_adapter import cloudflare_adapter
 from app.main import app
+from app.security.dlp import DLPEngine
 from app.security.encryption import FieldEncryptionEngine
 from app.security.key_provider import key_provider
 from app.security.masking import (
-    mask_pan, mask_email, mask_phone, mask_ip, mask_customer_id,
-    mask_token, mask_api_key, mask_jwt, mask_cloudflare_ray_id, MaskingPolicy
+    MaskingPolicy,
+    mask_api_key,
+    mask_cloudflare_ray_id,
+    mask_customer_id,
+    mask_email,
+    mask_ip,
+    mask_jwt,
+    mask_pan,
+    mask_phone,
+    mask_token,
 )
-from app.security.dlp import DLPEngine
-from app.integrations.cloudflare_adapter import cloudflare_adapter
 
 client = TestClient(app)
 
 def test_field_encryption_and_decryption_aes256_gcm():
     plaintext = "sensitive_cardholder_data_4921"
     encrypted = FieldEncryptionEngine.encrypt(plaintext)
-    
+
     assert "ciphertext" in encrypted
     assert "nonce" in encrypted
     assert encrypted["algorithm"] == "AES-256-GCM"
@@ -28,11 +37,11 @@ def test_field_encryption_and_decryption_aes256_gcm():
 def test_field_encryption_tamper_detection():
     plaintext = "secret_transaction_payload"
     encrypted = FieldEncryptionEngine.encrypt(plaintext)
-    
+
     # Tamper with base64 ciphertext
     tampered = dict(encrypted)
     tampered["ciphertext"] = "AAAA" + tampered["ciphertext"][4:]
-    
+
     with pytest.raises(ValueError, match="Decryption failed"):
         FieldEncryptionEngine.decrypt(tampered)
 
@@ -83,7 +92,7 @@ def test_dlp_engine_luhn_pan_and_secret_detection():
     )
     violations = DLPEngine.scan_for_violations(sample_text)
     v_types = [v["type"] for v in violations]
-    
+
     assert "PAN_DETECTED" in v_types
     assert "JWT_TOKEN_DETECTED" in v_types
     assert "API_KEY_DETECTED" in v_types

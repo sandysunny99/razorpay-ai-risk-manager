@@ -1,5 +1,7 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from app.models.entities import PaymentToken, Transaction
+
 
 class ImpactAnalyzer:
     """

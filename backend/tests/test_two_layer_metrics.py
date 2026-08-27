@@ -1,15 +1,17 @@
-import pytest
 import hashlib
 from pathlib import Path
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.core.database import Base
-from app.models.entities import Transaction, Card, Customer, PaymentToken, SecurityCase
-from app.evaluation.evaluator import ModelEvaluator
+
 from app.agent.risk_agent import RiskManagerAgent
-from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
+from app.core.database import Base
+from app.evaluation.evaluator import ModelEvaluator
+from app.models.entities import Card, Customer, PaymentToken, Transaction
 from app.threat_intel.base import ExposureMatch
-from app.integrations.razorpay_adapter import MockRazorpayAdapter
+from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
+
 
 @pytest.fixture
 def db_session():
@@ -24,7 +26,7 @@ def test_held_out_test_set_hash_integrity():
     """Validates that evaluation/test.jsonl is strictly frozen and unmodified."""
     test_path = Path("evaluation/test.jsonl")
     assert test_path.exists(), "Held-out test set file missing."
-    
+
     with open(test_path, "rb") as f:
         raw_bytes = f.read()
         computed_hash = hashlib.sha256(raw_bytes).hexdigest()
@@ -32,7 +34,7 @@ def test_held_out_test_set_hash_integrity():
             crlf_bytes = raw_bytes.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
             if hashlib.sha256(crlf_bytes).hexdigest() == "76a26e7cef5038a228ba178dc7e1d8e170c4133dc528f28d1764e46609ba8a5f":
                 computed_hash = "76a26e7cef5038a228ba178dc7e1d8e170c4133dc528f28d1764e46609ba8a5f"
-    
+
     EXPECTED_HASH = "76a26e7cef5038a228ba178dc7e1d8e170c4133dc528f28d1764e46609ba8a5f"
     assert computed_hash == EXPECTED_HASH, f"Test set was modified! Hash mismatch: {computed_hash} != {EXPECTED_HASH}"
 
@@ -40,7 +42,7 @@ def test_layer_1_broad_detection_metrics_t40():
     """Validates empirical metrics for Layer 1: Broad Risk Detection (T = 40.0)."""
     evaluator = ModelEvaluator()
     m = evaluator.evaluate_dataset("test.jsonl", threshold=40.0)
-    
+
     assert m["total_samples"] == 300
     assert m["tp"] == 59
     assert m["fp"] == 0
@@ -56,7 +58,7 @@ def test_layer_2_autonomous_action_metrics_t75():
     """Validates empirical metrics for Layer 2: Autonomous Auto-Remediation (T = 75.0)."""
     evaluator = ModelEvaluator()
     m = evaluator.evaluate_dataset("test.jsonl", threshold=75.0)
-    
+
     assert m["total_samples"] == 300
     assert m["tp"] == 35
     assert m["fp"] == 0

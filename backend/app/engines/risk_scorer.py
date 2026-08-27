@@ -1,6 +1,8 @@
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 from app.core.config import settings
 from app.models.schemas import FactorItem
+
 
 class RiskScoringEngine:
     """
@@ -35,13 +37,13 @@ class RiskScoringEngine:
         exp_score = float(exposure_result.get("score", 0.0))
         crd_score = float(card_result.get("score", 0.0))
         tok_score = float(token_result.get("score", 0.0))
-        
+
         cust_score = 75.0 if customer_risk_tier == "HIGH" else (35.0 if customer_risk_tier == "MEDIUM" else 0.0)
         merch_score = 50.0 if merchant_risk_tier == "HIGH" else 0.0
 
         # Weighted calculation
         total_weight = sum(self.weights.values())
-        
+
         contrib_txn = (txn_score * self.weights["transaction"]) / total_weight
         contrib_exp = (exp_score * self.weights["exposure"]) / total_weight
         contrib_crd = (crd_score * self.weights["card"]) / total_weight
@@ -50,7 +52,7 @@ class RiskScoringEngine:
         contrib_merch = (merch_score * self.weights["merchant"]) / total_weight
 
         raw_composite = contrib_txn + contrib_exp + contrib_crd + contrib_tok + contrib_cust + contrib_merch
-        
+
         # Boost to CRITICAL if multiple high-risk factors coincide
         # (e.g. Card Exposure + Active Token + Transaction Anomaly)
         if exp_score >= 80.0 and tok_score >= 15.0 and txn_score >= 50.0:

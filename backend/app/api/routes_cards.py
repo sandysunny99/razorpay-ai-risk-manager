@@ -1,12 +1,14 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
-from app.models.entities import Card, PaymentToken, Customer
+from app.engines.card_risk import CardRiskEngine
+from app.engines.exposure_correlation import ExposureCorrelationEngine
+from app.models.entities import Card, Customer, PaymentToken
 from app.models.schemas import CardResponse
 from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
-from app.engines.exposure_correlation import ExposureCorrelationEngine
-from app.engines.card_risk import CardRiskEngine
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
 threat_provider = SyntheticThreatIntelProvider()
@@ -17,16 +19,16 @@ async def list_cards(db: Session = Depends(get_db)):
     resp = []
     card_engine = CardRiskEngine()
     exposure_engine = ExposureCorrelationEngine(threat_provider)
-    
+
     for card in cards:
         token_count = db.query(PaymentToken).filter(PaymentToken.card_id == card.card_id).count()
         customer = db.query(Customer).filter(Customer.customer_id == card.customer_id).first()
-        
+
         crd_eval = card_engine.evaluate(card)
         exp_eval = await exposure_engine.evaluate(card, customer) if customer else {"score": 0.0, "match_count": 0}
-        
+
         risk_score = round(min(100.0, (crd_eval["score"] * 0.4) + (exp_eval["score"] * 0.6)), 1)
-        
+
         resp.append(CardResponse(
             card_id=card.card_id,
             customer_id=card.customer_id,

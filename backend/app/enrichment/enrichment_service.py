@@ -1,6 +1,8 @@
-from typing import Dict, Any, Optional
+from typing import Any, Dict
+
 from app.enrichment.bin_provider import bin_provider
 from app.enrichment.threat_provider import threat_enrichment_provider
+
 
 class EnrichmentService:
     """

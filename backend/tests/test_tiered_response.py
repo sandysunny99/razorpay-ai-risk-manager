@@ -1,12 +1,14 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.core.database import Base
-from app.models.entities import Transaction, Card, Customer, PaymentToken, SecurityCase
+
 from app.agent.risk_agent import RiskManagerAgent
-from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
-from app.threat_intel.base import ExposureMatch
+from app.core.database import Base
 from app.integrations.razorpay_adapter import MockRazorpayAdapter
+from app.models.entities import Card, Customer, PaymentToken, Transaction
+from app.threat_intel.base import ExposureMatch
+from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
+
 
 @pytest.fixture
 def test_db():

@@ -1,6 +1,8 @@
-from typing import List, Dict, Any
-from app.threat_intel.base import ThreatIntelProvider, ExposureMatch
+from typing import Any, Dict, List
+
 from app.models.entities import Card, Customer
+from app.threat_intel.base import ThreatIntelProvider
+
 
 class ExposureCorrelationEngine:
     """

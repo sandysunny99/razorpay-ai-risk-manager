@@ -1,0 +1,65 @@
+# .dockerignore — Razorpay AI Risk Manager
+# Excludes development, evaluation, and secret files from the production Docker image.
+# This reduces image size and prevents evaluation data / secrets from shipping to prod.
+
+# ── Python artifacts ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ── Database files (never ship to production) ─────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Environment / Secrets ─────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+*.p12
+
+# ── Git ───────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+
+# ── Evaluation data — not needed in runtime image ─────────────
+# The evaluation dataset (2000 synthetic records) is only needed
+# for offline benchmarking. The /api/v1/evaluation/* endpoints
+# use a separate scoring path that does not require this data at runtime.
+evaluation/
+
+# ── Documentation ─────────────────────────────────────────────
+docs/
+*.md
+!README.md
+
+# ── Scripts (not needed in production image) ──────────────────
+scripts/
+
+# ── Frontend source (only the built dist/ is needed) ──────────
+frontend/src/
+frontend/public/
+frontend/*.json
+frontend/*.ts
+frontend/*.js
+frontend/*.html
+frontend/node_modules/
+
+# ── Development tools ─────────────────────────────────────────
+.vscode/
+.idea/
+node_modules/
+pyproject.toml

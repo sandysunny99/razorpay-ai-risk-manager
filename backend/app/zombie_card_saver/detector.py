@@ -1,6 +1,8 @@
-from typing import List, Dict, Any
+from typing import List
+
 from app.models.entities import Card, PaymentToken
 from app.zombie_card_saver.schemas import ZombieCardStatus
+
 
 class ZombieDetector:
     """
@@ -28,7 +30,7 @@ class ZombieDetector:
         # If card is problematic AND has active tokens:
         if exposure_present or card_state in {"BLOCKED", "COMPROMISED"}:
             return ZombieCardStatus.CRITICAL
-        
+
         if card_state in {"EXPIRED", "REPLACED"}:
             # If recently used, it's ZOMBIE, else AT_RISK
             return ZombieCardStatus.ZOMBIE

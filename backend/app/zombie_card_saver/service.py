@@ -1,23 +1,29 @@
-import uuid
 import hashlib
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+import uuid
+
 from sqlalchemy.orm import Session
 
-from app.models.entities import Card, PaymentToken, Transaction, Customer, Merchant, AuditEvent
-from app.zombie_card_saver.schemas import (
-    ZombieCardStatus, ZombieSeverity, ZombieActionType,
-    DependentTokenItem, ZombieCardSummary, ZombieAnalysisResponse, ZombieStatisticsResponse
-)
-from app.zombie_card_saver.detector import zombie_detector
-from app.zombie_card_saver.severity import zombie_severity_classifier
-from app.zombie_card_saver.impact_analyzer import impact_analyzer
-from app.zombie_card_saver.recommendation import zombie_recommender
+from app.engines.audit_ledger import AuditLedgerEngine
 from app.engines.card_risk import CardRiskEngine
 from app.engines.token_risk import TokenRiskEngine
-from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
 from app.integrations.razorpay_adapter import razorpay_test_adapter
-from app.engines.audit_ledger import AuditLedgerEngine
+from app.models.entities import AuditEvent, Card, PaymentToken, Transaction
+from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
+from app.zombie_card_saver.detector import zombie_detector
+from app.zombie_card_saver.impact_analyzer import impact_analyzer
+from app.zombie_card_saver.recommendation import zombie_recommender
+from app.zombie_card_saver.schemas import (
+    DependentTokenItem,
+    ZombieActionType,
+    ZombieAnalysisResponse,
+    ZombieCardStatus,
+    ZombieCardSummary,
+    ZombieSeverity,
+    ZombieStatisticsResponse,
+)
+from app.zombie_card_saver.severity import zombie_severity_classifier
+
 
 class ZombieCardSaverService:
     """
@@ -38,7 +44,7 @@ class ZombieCardSaverService:
         for c in cards:
             tokens = db.query(PaymentToken).filter(PaymentToken.card_id == c.card_id).all()
             txns = db.query(Transaction).filter(Transaction.card_id == c.card_id).all()
-            
+
             # Check exposure in threat database
             matches = self.threat_provider._db.get(c.card_fingerprint, [])
             exposure_present = len(matches) > 0
@@ -53,7 +59,7 @@ class ZombieCardSaverService:
             active_tokens = [t for t in tokens if (t.status or "ACTIVE").upper() == "ACTIVE"]
             status = zombie_detector.evaluate_card_zombie_status(c, tokens, exposure_present)
             severity = zombie_severity_classifier.classify(c, active_tokens, len(txns), exposure_present, composite_score)
-            
+
             # Recurring check
             has_recurring = any(getattr(t, "is_recurring", False) or "sub" in (t.token_id or "").lower() for t in tokens)
             rec_action = zombie_recommender.recommend_for_card(severity, composite_score, has_recurring)
@@ -92,12 +98,12 @@ class ZombieCardSaverService:
         critical_zombies = sum(1 for s in summaries if s.severity == ZombieSeverity.CRITICAL)
         recently_used = sum(1 for s in summaries if s.severity in {ZombieSeverity.HIGH, ZombieSeverity.CRITICAL})
         exposure_linked = sum(1 for s in summaries if s.exposure_detected)
-        
+
         # Token actions
         tokens = db.query(PaymentToken).all()
         revoked_count = sum(1 for t in tokens if (t.status or "").upper() == "REVOKED")
         saved_count = sum(1 for t in tokens if (t.status or "").upper() == "ACTIVE" and getattr(t, "is_recurring", False))
-        
+
         return ZombieStatisticsResponse(
             total_zombie_cards=total_zombies,
             active_zombie_tokens=active_tokens,
@@ -130,7 +136,7 @@ class ZombieCardSaverService:
         active_tokens = [t for t in tokens if (t.status or "ACTIVE").upper() == "ACTIVE"]
         status = zombie_detector.evaluate_card_zombie_status(card, tokens, exposure_present)
         severity = zombie_severity_classifier.classify(card, active_tokens, len(txns), exposure_present, risk_score)
-        
+
         has_recurring = any(getattr(t, "is_recurring", False) or "sub" in (t.token_id or "").lower() for t in tokens)
         rec_action = zombie_recommender.recommend_for_card(severity, risk_score, has_recurring)
 
@@ -139,7 +145,7 @@ class ZombieCardSaverService:
         for t in tokens:
             t_risk_data = self.token_risk_engine.evaluate(t, card)
             t_rec = zombie_recommender.recommend_for_token(t, risk_score, getattr(t, "is_recurring", False), t_risk_data["score"])
-            
+
             merchant_name = f"Merchant {t.merchant_id[-4:]}" if t.merchant_id else "Global Merchant"
             item = DependentTokenItem(
                 token_id=t.token_id,

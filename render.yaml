@@ -1,19 +1,60 @@
+databases:
+  # Free-tier PostgreSQL on Render (512 MB storage, Singapore region)
+  # DATABASE_URL is automatically injected into the web service via fromDatabase.
+  # NOTE: Free tier pauses after 90 days of inactivity — resume from Render dashboard.
+  - name: razorpay-risk-db
+    plan: free
+    region: singapore
+    databaseName: razorpay_risk
+    user: razorpay_risk_user
+
 services:
   - type: web
     name: razorpay-risk-manager
     runtime: docker
     dockerfilePath: Dockerfile
-    plan: standard
+    plan: free
     region: singapore
     healthCheckPath: /health
     envVars:
+      # ── Database (auto-injected from the PostgreSQL service above) ────────
+      - key: DATABASE_URL
+        fromDatabase:
+          name: razorpay-risk-db
+          property: connectionString
+
+      # ── Application ───────────────────────────────────────────────────────
       - key: APP_MODE
         value: demo
+      - key: APP_ENV
+        value: production
       - key: DRY_RUN
         value: "true"
+
+      # ── Security Keys (auto-generated on first deploy; stable thereafter) ─
+      # NOTE: generateValue runs ONCE at service creation — NOT on each redeploy.
+      # If you delete the service and recreate it, a new key is generated and
+      # any AES-256-GCM encrypted data from the old key becomes unreadable.
       - key: HMAC_SECRET_KEY
         generateValue: true
       - key: MASTER_ENCRYPTION_KEY
         generateValue: true
-      - key: DATABASE_URL
-        value: sqlite:///./risk_management.db
+
+      # ── CORS ──────────────────────────────────────────────────────────────
+      - key: ALLOWED_ORIGINS
+        value: "https://razorpay-risk-manager.onrender.com"
+
+      # ── Razorpay (set manually in Render dashboard before webhooks work) ──
+      # - key: RAZORPAY_WEBHOOK_SECRET
+      #   sync: false   # Set this manually — do NOT commit real webhook secrets
+
+      # ── Optional Free API Integrations ────────────────────────────────────
+      # Uncomment and set values in Render dashboard (never commit real keys):
+      # - key: HIBP_API_KEY
+      #   sync: false
+      # - key: ABUSEIPDB_API_KEY
+      #   sync: false
+      # - key: REDIS_URL
+      #   sync: false
+      # - key: SENTRY_DSN
+      #   sync: false

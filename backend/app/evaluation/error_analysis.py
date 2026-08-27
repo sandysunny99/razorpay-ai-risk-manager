@@ -1,15 +1,16 @@
 import json
 import os
 import sys
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from app.evaluation.evaluator import ModelEvaluator
 
+
 def run_error_analysis(split: str = "test.jsonl", threshold: float = 75.0) -> Dict[str, Any]:
     evaluator = ModelEvaluator()
     records = evaluator.load_dataset(split)
-    
+
     false_negatives: List[Dict[str, Any]] = []
     false_positives: List[Dict[str, Any]] = []
     category_counts: Dict[str, int] = {}

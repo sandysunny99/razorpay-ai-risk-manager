@@ -1,11 +1,11 @@
-from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.core.database import get_db, Base, engine
+
 from app.agent.risk_agent import RiskManagerAgent
-from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
+from app.core.database import Base, engine, get_db
 from app.db.seed_data import seed_initial_data
 from app.models.schemas import InvestigationResponse
+from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
 
 router = APIRouter(prefix="/demo", tags=["Demo Controller"])
 threat_provider = SyntheticThreatIntelProvider()

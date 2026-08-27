@@ -2,13 +2,14 @@ import hashlib
 import json
 import logging
 from typing import Optional
-from fastapi import APIRouter, Request, Header, HTTPException, status
-from app.integrations.razorpay_adapter import RazorpayTestAdapter
-from app.events.event_normalizer import EventNormalizer
-from app.events.event_deduplicator import event_deduplicator
+
+from fastapi import APIRouter, Header, HTTPException, Request, status
+
 from app.events.event_bus import event_bus
+from app.events.event_deduplicator import event_deduplicator
+from app.events.event_normalizer import EventNormalizer
+from app.integrations.razorpay_adapter import RazorpayTestAdapter
 from app.security.dlp import DLPEngine
-from app.core.security import verify_hmac_signature
 
 router = APIRouter(prefix="/api/v1/webhooks", tags=["Webhooks"])
 logger = logging.getLogger("webhooks_api")
@@ -26,7 +27,7 @@ async def receive_razorpay_webhook(
     """
     raw_body = await request.body()
     signature = x_razorpay_signature or request.headers.get("x-razorpay-signature") or request.headers.get("X-Razorpay-Signature")
-    
+
     # 1. Mandatory Signature Verification
     if not signature:
         logger.warning("Rejecting unsigned Razorpay webhook payload.")
@@ -66,7 +67,7 @@ async def receive_razorpay_webhook(
     event_name = sanitized_payload.get("event", "payment.authorized")
     sec_event = EventNormalizer.normalize_razorpay_webhook(sanitized_payload, event_name)
     sec_event.metadata["dlp_violations_count"] = len(dlp_violations)
-    
+
     event_bus.publish(sec_event)
 
     return {

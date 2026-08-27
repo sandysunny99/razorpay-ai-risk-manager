@@ -61,3 +61,28 @@ External cyber threat intelligence (CTI) feeds (dark web markets, Telegram dumps
 - [x] **OWASP LLM01: Prompt Injection**: Strict data vs. instruction isolation and payload sanitization.
 - [x] **OWASP LLM06: Excessive Agency**: Policy Guardrail Engine gates all sensitive tool executions.
 - [x] **OWASP API1: Broken Object Level Authorization**: All card and token operations scoped by merchant and customer IDs.
+
+## Recent Security Improvements (v2.0.0-rc2 post-AntiGravity hardening)
+
+The following security controls were added in the Phase 2-8 hardening session (commit 33e2738)
+and the CI fix session (commit d94ece3):
+
+- **CORS**: Wildcard * replaced with explicit origin allowlist via ALLOWED_ORIGINS env var
+- **HMAC**: No hardcoded fallback — startup warns loudly if HMAC_SECRET_KEY is not set;
+  uses ephemeral random key in demo/DRY_RUN mode
+- **Rate Limiting**: slowapi middleware applied to all API endpoints; Redis-backed when
+  REDIS_URL is configured (multi-worker safe)
+- **CSP**: Full Content-Security-Policy header on all responses (no unsafe-eval)
+- **Auth**: Optional Bearer API key for mutation endpoints (DRY_RUN bypass for demo);
+  constant-time hmac.compare_digest comparison
+- **SSE**: Real-time event stream at /api/v1/stream/risk-events with 15s heartbeat
+  and exponential backoff reconnect on the frontend
+- **Error Handler**: Global 500 handler with correlation ID — no tracebacks in responses
+- **Docs Gating**: /docs and /redoc disabled when APP_ENV=production
+- **Pagination**: Audit events endpoint supports limit/offset query parameters
+- **DLP Size Limit**: /api/v1/security/dlp/test body capped at 10KB
+- **datetime.utcnow()**: Replaced across all 9 affected files (Python 3.12 compatibility)
+- **Alembic**: Database migration framework added for PostgreSQL production path
+- **Sentry**: Optional error monitoring with PAN scrubbing before events are sent
+- **CI/CD**: Parallel test jobs, Trivy CVE scan, bandit SAST, ruff linting, TypeScript check
+

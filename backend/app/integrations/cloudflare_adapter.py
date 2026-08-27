@@ -1,8 +1,10 @@
-import uuid
-from typing import Dict, Any, Optional
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+import uuid
+
 from app.security.dlp import DLPEngine
 from app.security.masking import mask_cloudflare_ray_id, mask_ip
+
 
 class CloudflareAdapter:
     """
@@ -31,7 +33,7 @@ class CloudflareAdapter:
         raw_ray_id = hdrs.get("cf-ray") or hdrs.get("CF-Ray") or f"ray_{uuid.uuid4().hex[:12]}"
         country = hdrs.get("cf-ipcountry") or hdrs.get("CF-IPCountry") or "IN"
         connecting_ip = hdrs.get("cf-connecting-ip") or hdrs.get("CF-Connecting-IP") or "122.166.45.10"
-        
+
         # Determine bot classification based on Cloudflare Bot Score (1-99)
         if bot_score == 1:
             bot_signal = "VERIFIED_BOT"

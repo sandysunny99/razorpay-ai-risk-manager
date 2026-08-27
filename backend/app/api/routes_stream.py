@@ -12,9 +12,9 @@ For production with gunicorn --workers 4, replace the asyncio.Queue with
 a Redis pub/sub channel (see PHASE 6 architecture notes).
 """
 import asyncio
+from datetime import datetime, timezone
 import json
 import logging
-from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from fastapi import APIRouter

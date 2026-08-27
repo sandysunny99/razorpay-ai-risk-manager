@@ -1,5 +1,7 @@
-from typing import Dict, Any, List
-from app.models.entities import Transaction, Customer
+from typing import Any, Dict, List
+
+from app.models.entities import Customer, Transaction
+
 
 class TransactionRiskEngine:
     """
@@ -64,7 +66,7 @@ class TransactionRiskEngine:
 
         # Normalize score to 0 - 100
         normalized_score = min(100.0, factor_score)
-        
+
         return {
             "score": normalized_score,
             "reasons": reasons,

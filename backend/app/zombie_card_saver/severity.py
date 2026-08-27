@@ -1,7 +1,8 @@
-from datetime import datetime, timedelta
 from typing import List
+
 from app.models.entities import Card, PaymentToken
 from app.zombie_card_saver.schemas import ZombieSeverity
+
 
 class ZombieSeverityClassifier:
     """

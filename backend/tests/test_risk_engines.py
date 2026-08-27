@@ -1,10 +1,8 @@
-import pytest
-from datetime import datetime
-from app.models.entities import Transaction, Customer, Card, PaymentToken
-from app.engines.transaction_risk import TransactionRiskEngine
-from app.engines.card_risk import CardRiskEngine
-from app.engines.token_risk import TokenRiskEngine
 from app.engines.risk_scorer import RiskScoringEngine
+from app.engines.token_risk import TokenRiskEngine
+from app.engines.transaction_risk import TransactionRiskEngine
+from app.models.entities import Card, Customer, PaymentToken, Transaction
+
 
 def test_transaction_risk_high_anomaly():
     engine = TransactionRiskEngine()
@@ -51,7 +49,7 @@ def test_zombie_token_detection():
         token_id="tok_zombie_1", card_id="c_exp", customer_id="c1",
         status="ACTIVE", token_age_days=100, usage_count=10
     )
-    
+
     eval_res = token_engine.evaluate(token_active, card_expired)
     assert eval_res["is_zombie"] is True
     assert eval_res["score"] >= 80.0
@@ -63,7 +61,7 @@ def test_risk_scorer_weights_and_severity():
     exp_res = {"score": 90.0, "reasons": ["Telegram leak"]}
     crd_res = {"score": 0.0, "reasons": []}
     tok_res = {"score": 15.0, "reasons": []}
-    
+
     result = scorer.calculate(txn_res, exp_res, crd_res, tok_res)
     assert result["composite_score"] >= 75.0
     assert result["severity"] == "CRITICAL"

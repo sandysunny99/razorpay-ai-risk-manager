@@ -1,12 +1,11 @@
-import sys
-import os
 import csv
-import json
-from typing import Dict, Any, List
+import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+from app.engines.policy_engine import PolicyEngine
 from app.evaluation.evaluator import ModelEvaluator
-from app.engines.policy_engine import PolicyEngine, RiskPolicyConfig
+
 
 def run_policy_tier_validation():
     ev = ModelEvaluator()
@@ -23,7 +22,7 @@ def run_policy_tier_validation():
     for r in records:
         score = ev.predict_record(r, model_type="full")
         tier_info = policy.classify_risk_tier(score, context=r)
-        
+
         tier = tier_info["response_tier"]
         action = tier_info["recommended_action"]
         label = r["label"]

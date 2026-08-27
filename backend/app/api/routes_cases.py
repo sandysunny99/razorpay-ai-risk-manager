@@ -1,6 +1,8 @@
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
 from app.models.entities import SecurityCase
 from app.models.schemas import SecurityCaseResponse

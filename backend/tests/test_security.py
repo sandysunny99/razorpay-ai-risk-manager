@@ -1,8 +1,12 @@
-import pytest
 from app.core.security import (
-    luhn_checksum_valid, mask_pan, extract_bin,
-    generate_card_fingerprint, redact_sensitive_data, sanitize_untrusted_input
+    extract_bin,
+    generate_card_fingerprint,
+    luhn_checksum_valid,
+    mask_pan,
+    redact_sensitive_data,
+    sanitize_untrusted_input,
 )
+
 
 def test_luhn_algorithm_validation():
     # Valid test Visa PAN (4111 1111 1111 1111 is standard valid Luhn)
@@ -26,7 +30,7 @@ def test_hmac_fingerprint_deterministic():
     fp1 = generate_card_fingerprint("4111111111114921")
     fp2 = generate_card_fingerprint("4111 1111 1111 4921")
     fp_diff = generate_card_fingerprint("4111111111111234")
-    
+
     assert fp1 == fp2  # Same normalized PAN yields same fingerprint
     assert len(fp1) == 64  # SHA-256 hex length
     assert fp1 != fp_diff

@@ -11,10 +11,12 @@ Verifies:
 """
 
 import sys
+
 sys.path.insert(0, ".")
 sys.path.insert(0, "backend")
 
 from app.integrations.cloudflare_adapter import cloudflare_adapter
+
 
 def verify_cloudflare_edge():
     print("=" * 65)

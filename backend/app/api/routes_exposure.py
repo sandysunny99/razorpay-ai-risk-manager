@@ -1,10 +1,11 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
-from app.models.entities import ExposureEvent, Card
+from app.models.entities import Card, ExposureEvent
 from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
-from app.security.masking import mask_pan
 
 router = APIRouter(prefix="/exposure", tags=["Card Exposure & CTI"])
 threat_provider = SyntheticThreatIntelProvider()
@@ -55,7 +56,7 @@ def check_card_exposure(payload: Dict[str, Any], db: Session = Depends(get_db)) 
     """
     fp = payload.get("card_fingerprint")
     card_id = payload.get("card_id")
-    
+
     if not fp and card_id:
         card = db.query(Card).filter(Card.card_id == card_id).first()
         if card:

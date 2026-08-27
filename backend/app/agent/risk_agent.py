@@ -1,14 +1,15 @@
-import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
+import uuid
+
 from sqlalchemy.orm import Session
 
 from app.agent.tools import AgentToolRegistry
-from app.models.schemas import InvestigationResponse, InvestigationStep, FactorItem, ToolAuditItem
-from app.threat_intel.base import ThreatIntelProvider
-from app.integrations.razorpay_adapter import RazorpayPaymentAdapter
 from app.engines.policy_engine import PolicyEngine
-from app.core.security import mask_pan
+from app.integrations.razorpay_adapter import RazorpayPaymentAdapter
+from app.models.schemas import InvestigationResponse, InvestigationStep, ToolAuditItem
+from app.threat_intel.base import ThreatIntelProvider
+
 
 class RiskManagerAgent:
     """
@@ -63,7 +64,7 @@ class RiskManagerAgent:
             status="INFO"
         ))
         record_tool("get_transaction", True, "Initial transaction entity retrieval required for risk screening.")
-        
+
         txn = await self.tools.get_transaction(txn_id)
         if not txn:
             raise ValueError(f"Transaction with ID '{txn_id}' not found in registry.")
@@ -121,7 +122,7 @@ class RiskManagerAgent:
                 status="INFO"
             ))
             exp_risk = await self.tools.check_card_exposure(card, customer)
-            
+
             if exp_risk["match_count"] > 0:
                 timeline.append(InvestigationStep(
                     timestamp=now_str(),
@@ -180,7 +181,7 @@ class RiskManagerAgent:
             "merchant_id": txn.merchant_id
         }
         tier_info = self.policy_engine.classify_risk_tier(initial_risk, context=policy_context)
-        
+
         risk_level = tier_info["risk_level"]
         detection_status = tier_info["detection_status"]
         response_tier = tier_info["response_tier"]
@@ -247,7 +248,7 @@ class RiskManagerAgent:
             timeline.append(InvestigationStep(
                 timestamp=now_str(),
                 stage="VERIFY",
-                description=f"Querying Razorpay Token Vault API to verify state transition -> Confirmed REVOKED",
+                description="Querying Razorpay Token Vault API to verify state transition -> Confirmed REVOKED",
                 tool_used="verify_and_recalculate",
                 status="SUCCESS"
             ))
@@ -265,7 +266,7 @@ class RiskManagerAgent:
             action_taken = "REQUEST_STEP_UP"
             record_tool("request_step_up_challenge", True, "Simulated 2FA Step-Up Challenge initiated for moderate-risk transaction.")
             challenge = await self.tools.request_step_up_challenge(txn.txn_id)
-            
+
             timeline.append(InvestigationStep(
                 timestamp=now_str(),
                 stage="ACT",
@@ -279,7 +280,7 @@ class RiskManagerAgent:
             if simulate_step_up:
                 outcome_str = "SUCCESS" if simulate_step_up is True else str(simulate_step_up).upper()
                 is_success = outcome_str in ["SUCCESS", "VERIFIED"]
-                
+
                 verify_res = await self.tools.verify_step_up_challenge(
                     challenge["challenge_id"],
                     success=is_success,
@@ -324,7 +325,7 @@ class RiskManagerAgent:
                     timeline.append(InvestigationStep(
                         timestamp=now_str(),
                         stage="VERIFY",
-                        description=f"Step-Up Challenge TIMEOUT: Cardholder did not respond within verification window. Case escalated to SOC queue.",
+                        description="Step-Up Challenge TIMEOUT: Cardholder did not respond within verification window. Case escalated to SOC queue.",
                         tool_used="verify_step_up_challenge",
                         status="WARNING"
                     ))
@@ -334,7 +335,7 @@ class RiskManagerAgent:
                     timeline.append(InvestigationStep(
                         timestamp=now_str(),
                         stage="VERIFY",
-                        description=f"Step-Up Challenge ABANDONED by user. Transaction cancelled.",
+                        description="Step-Up Challenge ABANDONED by user. Transaction cancelled.",
                         tool_used="verify_step_up_challenge",
                         status="WARNING"
                     ))

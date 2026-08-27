@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 import logging
-from typing import Dict, Any, Optional
-from datetime import datetime, timezone, timezone
+from typing import Any, Dict, Optional
+
 from app.core.config import settings
 
 logger = logging.getLogger("razorpay_adapter")
@@ -109,7 +110,7 @@ class MockRazorpayAdapter(RazorpayAdapter):
     ) -> Dict[str, Any]:
         result_status = outcome or ("VERIFIED" if success else "FAILED")
         logger.info(f"[MockRazorpayAdapter] Verifying challenge {challenge_id}: Result={result_status}")
-        
+
         is_success = (result_status in ["VERIFIED", "SUCCESS"])
         if result_status in ["VERIFIED", "SUCCESS"]:
             msg = "2FA challenge verified successfully. Customer confirmed transaction intent."
@@ -206,7 +207,8 @@ class RazorpayTestAdapter(RazorpayAdapter):
         webhook_secret = secret or settings.RAZORPAY_KEY_SECRET or "rzp_test_webhook_secret_fallback"
         if not signature or not raw_body:
             return False
-        import hmac, hashlib
+        import hashlib
+        import hmac
         expected_sig = hmac.new(webhook_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected_sig, signature)
 

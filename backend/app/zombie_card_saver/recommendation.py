@@ -1,6 +1,6 @@
-from typing import Dict, Any, List
 from app.models.entities import PaymentToken
 from app.zombie_card_saver.schemas import ZombieActionType, ZombieSeverity
+
 
 class ZombieRecommendationEngine:
     """

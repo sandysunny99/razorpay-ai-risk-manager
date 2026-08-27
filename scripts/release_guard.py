@@ -10,10 +10,10 @@ This script enforces release criteria:
 5. Policy configuration thresholds sanity check
 """
 
-import sys
-import json
 import hashlib
+import json
 from pathlib import Path
+import sys
 
 FROZEN_TEST_HASH = "76a26e7cef5038a228ba178dc7e1d8e170c4133dc528f28d1764e46609ba8a5f"
 
@@ -39,7 +39,7 @@ def verify_test_set_hash() -> bool:
     if not test_path.exists():
         print(f"[ERROR] Test set missing at: {test_path.resolve()}")
         return False
-    
+
     with open(test_path, "rb") as f:
         raw_bytes = f.read()
         computed_hash = hashlib.sha256(raw_bytes).hexdigest()
@@ -47,13 +47,13 @@ def verify_test_set_hash() -> bool:
             crlf_bytes = raw_bytes.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
             if hashlib.sha256(crlf_bytes).hexdigest() == FROZEN_TEST_HASH:
                 computed_hash = FROZEN_TEST_HASH
-    
+
     if computed_hash != FROZEN_TEST_HASH:
-        print(f"[FATAL ERROR] Test set SHA-256 mismatch!")
+        print("[FATAL ERROR] Test set SHA-256 mismatch!")
         print(f"  Expected: {FROZEN_TEST_HASH}")
         print(f"  Computed: {computed_hash}")
         return False
-    
+
     print(f"[PASS] Held-Out Test Set SHA-256 Verified: {computed_hash}")
     return True
 
@@ -71,12 +71,12 @@ def verify_file_structure() -> bool:
 def verify_dataset_isolation_and_schema() -> bool:
     splits = ["train.jsonl", "validation.jsonl", "test.jsonl"]
     seen_ids = {}
-    
+
     for split in splits:
         p = Path("evaluation") / split
         if not p.exists():
             return False
-        
+
         with open(p, "r", encoding="utf-8") as f:
             for line_idx, line in enumerate(f, start=1):
                 if not line.strip():
@@ -84,16 +84,16 @@ def verify_dataset_isolation_and_schema() -> bool:
                 record = json.loads(line)
                 txn_id = record.get("transaction_id") or record.get("txn_id")
                 label = record.get("label") if "label" in record else record.get("is_compromised")
-                
+
                 if txn_id is None or label is None:
                     print(f"[ERROR] Malformed record in {split} line {line_idx}: txn_id={txn_id}, label={label}")
                     return False
-                
+
                 if txn_id in seen_ids:
                     print(f"[FATAL ERROR] Data leakage / Duplicate txn_id: '{txn_id}' in {split} was already in {seen_ids[txn_id]}")
                     return False
                 seen_ids[txn_id] = split
-                
+
     print(f"[PASS] Dataset Isolation & Schema Checked: {len(seen_ids)} unique transaction records across 3 splits (Zero Leakage)")
     return True
 
@@ -102,7 +102,7 @@ def verify_policy_thresholds() -> bool:
     try:
         from app.engines.policy_engine import RiskPolicyConfig
         config = RiskPolicyConfig()
-        
+
         assert config.monitor_threshold == 35.0, "Invalid monitor_threshold"
         assert config.broad_detection_threshold == 40.0, "Invalid broad_detection_threshold"
         assert config.step_up_threshold == 40.0, "Invalid step_up_threshold"
@@ -118,12 +118,12 @@ def main():
     print("=" * 70)
     print("RAZORPAY AI RISK MANAGER: RELEASE GUARD")
     print("=" * 70)
-    
+
     ok1 = verify_test_set_hash()
     ok2 = verify_file_structure()
     ok3 = verify_dataset_isolation_and_schema()
     ok4 = verify_policy_thresholds()
-    
+
     print("-" * 70)
     if ok1 and ok2 and ok3 and ok4:
         print("[SUCCESS] ALL RELEASE GUARD CHECKS PASSED. SYSTEM IS READY.")

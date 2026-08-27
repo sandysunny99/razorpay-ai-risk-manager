@@ -1,6 +1,7 @@
 import logging
-from typing import Callable, List, Dict
-from app.events.event_model import SecurityEvent, EventType
+from typing import Callable, Dict, List
+
+from app.events.event_model import EventType, SecurityEvent
 
 logger = logging.getLogger("event_bus")
 

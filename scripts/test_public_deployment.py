@@ -1,10 +1,12 @@
 import argparse
-import sys
-import hmac
 import hashlib
+import hmac
 import json
+import sys
 import time
+
 import httpx
+
 
 def test_public_deployment(base_url: str, secret: str = "rzp_test_mock_agent_secret"):
     base_url = base_url.rstrip("/")
@@ -30,7 +32,7 @@ def test_public_deployment(base_url: str, secret: str = "rzp_test_mock_agent_sec
         try:
             res = client.get("/api/v1/health/dependencies")
             if res.status_code == 200:
-                print(f"[PASS] GET /api/v1/health/dependencies         -> HTTP 200")
+                print("[PASS] GET /api/v1/health/dependencies         -> HTTP 200")
             else:
                 print(f"[FAIL] GET /api/v1/health/dependencies         -> HTTP {res.status_code}")
                 all_passed = False
@@ -73,11 +75,11 @@ def test_public_deployment(base_url: str, secret: str = "rzp_test_mock_agent_sec
             }
             body_bytes = json.dumps(payload).encode("utf-8")
             sig = hmac.new(secret.encode("utf-8"), body_bytes, hashlib.sha256).hexdigest()
-            
+
             # Missing signature check
             res_unsig = client.post("/api/v1/webhooks/razorpay", content=body_bytes, headers={"Content-Type": "application/json"})
             if res_unsig.status_code == 401:
-                print(f"[PASS] POST /api/v1/webhooks/razorpay (Unsigned) -> HTTP 401 (Correctly Rejected)")
+                print("[PASS] POST /api/v1/webhooks/razorpay (Unsigned) -> HTTP 401 (Correctly Rejected)")
             else:
                 print(f"[FAIL] POST /api/v1/webhooks/razorpay (Unsigned) -> HTTP {res_unsig.status_code} (Expected 401)")
                 all_passed = False

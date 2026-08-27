@@ -1,13 +1,14 @@
+from typing import Any, Dict, List
 import uuid
-from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, Query, Request, HTTPException, status
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
+from app.integrations.cloudflare_adapter import cloudflare_adapter
 from app.models.entities import CloudflareSecurityEvent, DLPEvent
 from app.security.dlp import DLPEngine
 from app.security.key_provider import key_provider
-from app.security.encryption import FieldEncryptionEngine
-from app.integrations.cloudflare_adapter import cloudflare_adapter
 
 router = APIRouter(prefix="/security", tags=["Security Perimeter & Data Protection"])
 

@@ -33,6 +33,8 @@ ignore = [
 "backend/app/integrations/razorpay_adapter.py" = ["S105", "S107"]
 # Scripts — test credentials, argparse defaults, long diagnostic strings
 "scripts/**" = ["S105", "S107", "S311", "S603", "S607"]
+# Alembic generated migration files — boilerplate imports and style
+"backend/alembic/**" = ["F401", "I001", "W291", "E302"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

@@ -1,6 +1,8 @@
-from typing import Dict, Any, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
 from app.core.config import settings
+
 
 @dataclass
 class RiskPolicyConfig:

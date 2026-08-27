@@ -1,7 +1,7 @@
-import sys
-import json
 import hashlib
+import json
 from pathlib import Path
+import sys
 
 sys.path.insert(0, 'backend')
 from app.evaluation.evaluator import ModelEvaluator

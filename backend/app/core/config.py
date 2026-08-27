@@ -1,7 +1,8 @@
-import os
 import secrets
-from pydantic_settings import BaseSettings
 from typing import List
+
+from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     APP_NAME: str = "Razorpay AI Risk Manager Agent"
@@ -81,6 +82,38 @@ class Settings(BaseSettings):
     # Policy Guardrails
     AUTO_REVOKE_TOKEN_ON_CRITICAL: bool = True
     AUTO_SUSPEND_CARD_ON_CRITICAL: bool = False  # Requires human review
+
+    # ----------------------------------------------------------------
+    # Free API Integrations (Phase 2) — all optional, graceful fallback
+    # ----------------------------------------------------------------
+
+    # Have I Been Pwned v3 — dark web breach correlation
+    # Free key at: https://haveibeenpwned.com/API/Key
+    HIBP_API_KEY: str = ""
+
+    # AbuseIPDB — IP reputation scoring
+    # Free at: https://abuseipdb.com (1,000 checks/day)
+    ABUSEIPDB_API_KEY: str = ""
+
+    # Upstash Redis — multi-worker safe rate limiting
+    # Free at: https://upstash.com (10K req/day)
+    REDIS_URL: str = ""
+
+    # Sentry — production error monitoring
+    # Free at: https://sentry.io (5K events/month)
+    SENTRY_DSN: str = ""
+
+    # ip-api.com — real geo-deviation scoring (no key, 45 req/min free)
+    # Automatically used when transaction_ip is a public IP address.
+    ENABLE_IP_GEO: bool = True
+
+    @property
+    def redis_configured(self) -> bool:
+        return bool(self.REDIS_URL)
+
+    @property
+    def sentry_configured(self) -> bool:
+        return bool(self.SENTRY_DSN)
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

@@ -1,10 +1,12 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+from app.agent.risk_agent import RiskManagerAgent
 from app.core.database import Base
 from app.db.seed_data import seed_initial_data
-from app.agent.risk_agent import RiskManagerAgent
 from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
+
 
 @pytest.fixture
 def multi_tenant_db():
@@ -31,7 +33,7 @@ async def test_multi_tenant_idor_cross_merchant_access_denied(multi_tenant_db):
     # Attempting to access DemoStore's transaction using merchant_id='merchant_attacker_99'
     with pytest.raises(PermissionError) as exc_info:
         await agent.investigate_transaction("TXN-2026-9042", merchant_id="merchant_attacker_99")
-    
+
     assert "Multi-Tenant Security Violation" in str(exc_info.value)
 
 def test_multi_tenant_case_isolation_query(multi_tenant_db):

@@ -1,5 +1,5 @@
-import pytest
-from app.engines.policy_engine import PolicyEngine, RiskPolicyConfig
+from app.engines.policy_engine import PolicyEngine
+
 
 def test_policy_token_revocation_auto_execute():
     engine = PolicyEngine()

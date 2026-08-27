@@ -1,7 +1,7 @@
-import pytest
-from app.core.security import sanitize_untrusted_input, redact_sensitive_data
+from app.core.security import redact_sensitive_data, sanitize_untrusted_input
 from app.engines.token_risk import TokenRiskEngine
 from app.models.entities import Card, PaymentToken
+
 
 def test_adversarial_prompt_injection_sanitization():
     # Prompt injection payloads designed to trick LLMs
@@ -33,7 +33,7 @@ def test_dlp_catches_all_pan_formats():
 
 def test_zombie_token_on_replaced_card():
     token_engine = TokenRiskEngine()
-    
+
     # Replaced/Blocked Card
     card_replaced = Card(
         card_id="c_rep", customer_id="c1", masked_pan="**** **** **** 9911",
@@ -45,7 +45,7 @@ def test_zombie_token_on_replaced_card():
         token_id="tok_old_1", card_id="c_rep", customer_id="c1",
         status="ACTIVE", token_age_days=90, usage_count=15
     )
-    
+
     result = token_engine.evaluate(old_token, card_replaced)
     assert result["is_zombie"] is True
     assert result["score"] >= 80.0

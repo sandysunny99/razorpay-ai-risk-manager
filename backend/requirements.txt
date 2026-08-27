@@ -10,3 +10,10 @@ python-multipart>=0.0.9
 aiofiles>=23.2.1
 cryptography>=42.0.0
 slowapi>=0.1.9
+# ── Phase 2: Free API Integrations (all optional) ──
+redis>=5.0.0
+sentry-sdk[fastapi]>=2.0.0
+# ── Phase 3: Production database support ──
+alembic>=1.13.0
+psycopg2-binary>=2.9.0
+gunicorn>=22.0.0

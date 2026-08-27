@@ -1,6 +1,8 @@
+
 import pytest
-import os
+
 from app.evaluation.evaluator import ModelEvaluator
+
 
 @pytest.fixture
 def evaluator():

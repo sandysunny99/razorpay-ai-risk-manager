@@ -1,8 +1,11 @@
-import os
 import base64
-from typing import Dict, Any, Optional
+import os
+from typing import Dict, Optional
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
 from app.security.key_provider import key_provider
+
 
 class FieldEncryptionEngine:
     """
@@ -30,7 +33,7 @@ class FieldEncryptionEngine:
 
         key_bytes = key_entry["key_bytes"]
         aesgcm = AESGCM(key_bytes)
-        
+
         # 96-bit unique nonce as recommended by NIST SP 800-38D
         nonce = os.urandom(12)
         ciphertext = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)

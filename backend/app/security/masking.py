@@ -1,5 +1,6 @@
 import re
-from typing import Optional, Dict, Any
+from typing import Any, Dict
+
 
 def mask_pan(pan: str) -> str:
     """

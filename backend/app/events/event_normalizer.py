@@ -1,8 +1,10 @@
-import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
-from app.events.event_model import SecurityEvent, EventType
+from typing import Any, Dict
+import uuid
+
 from app.core.security import generate_card_fingerprint
+from app.events.event_model import EventType, SecurityEvent
+
 
 class EventNormalizer:
     """
@@ -20,7 +22,7 @@ class EventNormalizer:
             "refund.created": EventType.PAYMENT_REFUNDED,
         }
         event_type = event_mapping.get(event_name, EventType.PAYMENT_CREATED)
-        
+
         entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
         if not entity:
             entity = payload.get("payload", {}).get("order", {}).get("entity", {})
@@ -28,7 +30,7 @@ class EventNormalizer:
         txn_id = entity.get("id", f"pay_test_{uuid.uuid4().hex[:10]}")
         merchant_id = payload.get("account_id") or entity.get("merchant_id", "acc_default_rzp")
         token_id = entity.get("token_id")
-        
+
         # Safe card metadata (No raw PAN)
         card_details = entity.get("card", {})
         card_fingerprint = None

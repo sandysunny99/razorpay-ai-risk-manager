@@ -11,13 +11,15 @@ Verifies:
 """
 
 import sys
+
 sys.path.insert(0, ".")
 sys.path.insert(0, "backend")
 
+from app.security.dlp import DLPEngine
 from app.security.encryption import FieldEncryptionEngine
 from app.security.key_provider import key_provider
-from app.security.masking import mask_pan, mask_email, mask_ip, mask_token
-from app.security.dlp import DLPEngine
+from app.security.masking import mask_email, mask_ip, mask_pan, mask_token
+
 
 def verify_data_security():
     print("=" * 65)

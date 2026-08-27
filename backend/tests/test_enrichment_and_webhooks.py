@@ -1,14 +1,17 @@
-import pytest
-import hmac
 import hashlib
+import hmac
 import json
-from httpx import AsyncClient, ASGITransport
-from app.main import app
+
+from httpx import ASGITransport, AsyncClient
+import pytest
+
 from app.core.config import settings
-from app.enrichment.bin_provider import bin_provider, MockBinProvider
-from app.enrichment.threat_provider import threat_enrichment_provider, MockThreatProvider
+from app.enrichment.bin_provider import bin_provider
+from app.enrichment.threat_provider import threat_enrichment_provider
 from app.events.event_deduplicator import event_deduplicator
 from app.integrations.razorpay_adapter import RazorpayTestAdapter
+from app.main import app
+
 
 def test_bin_provider_metadata_and_caching():
     # Test valid 6-digit BIN lookup
@@ -41,12 +44,12 @@ def test_event_deduplicator_idempotency():
 def test_razorpay_webhook_hmac_signature_verification():
     secret = settings.RAZORPAY_KEY_SECRET
     raw_payload = b'{"event":"payment.authorized","account_id":"acc_1","payload":{"payment":{"entity":{"id":"pay_100","amount":50000}}}}'
-    
+
     valid_signature = hmac.new(secret.encode("utf-8"), raw_payload, hashlib.sha256).hexdigest()
-    
+
     # Valid Signature Check
     assert RazorpayTestAdapter.verify_webhook_signature(raw_payload, valid_signature, secret=secret) is True
-    
+
     # Tampered Body Check
     tampered_payload = b'{"event":"payment.authorized","account_id":"acc_1","payload":{"payment":{"entity":{"id":"pay_100","amount":999999}}}}'
     assert RazorpayTestAdapter.verify_webhook_signature(tampered_payload, valid_signature, secret=secret) is False

@@ -1,8 +1,7 @@
-import hashlib
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timezone
-from app.threat_intel.base import ThreatIntelProvider, ExposureMatch
+from typing import Dict, List
+
 from app.core.security import generate_card_fingerprint
+from app.threat_intel.base import ExposureMatch, ThreatIntelProvider
 
 # Known Synthetic Test Cards & Fingerprints for Deterministic Scenarios
 # Demo Card: **** **** **** 4921 (BIN 411111)
@@ -34,7 +33,7 @@ class SyntheticThreatIntelProvider(ThreatIntelProvider):
     8. Exposed card + active token
     9. Exposed card + suspicious transaction
     """
-    
+
     def __init__(self):
         self._db: Dict[str, List[ExposureMatch]] = {
             DEMO_FP_4921: [
@@ -90,7 +89,7 @@ class SyntheticThreatIntelProvider(ThreatIntelProvider):
                 )
             ]
         }
-        
+
         self._bin_db: Dict[str, List[ExposureMatch]] = {
             "411111": [
                 ExposureMatch(
@@ -104,7 +103,7 @@ class SyntheticThreatIntelProvider(ThreatIntelProvider):
                 )
             ]
         }
-        
+
         self._email_db: Dict[str, List[ExposureMatch]] = {
             "arjun.kumar1042@example.com": [
                 ExposureMatch(

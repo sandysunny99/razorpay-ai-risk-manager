@@ -1,14 +1,16 @@
+
 import pytest
-from datetime import datetime, timedelta
+
+from app.core.database import Base, SessionLocal, engine
+from app.db.seed_data import seed_initial_data
 from app.models.entities import Card, PaymentToken, Transaction
 from app.zombie_card_saver.detector import zombie_detector
-from app.zombie_card_saver.severity import zombie_severity_classifier
 from app.zombie_card_saver.impact_analyzer import impact_analyzer
 from app.zombie_card_saver.recommendation import zombie_recommender
-from app.zombie_card_saver.schemas import ZombieCardStatus, ZombieSeverity, ZombieActionType
+from app.zombie_card_saver.schemas import ZombieActionType, ZombieCardStatus, ZombieSeverity
 from app.zombie_card_saver.service import zombie_card_saver_service
-from app.core.database import SessionLocal, Base, engine
-from app.db.seed_data import seed_initial_data
+from app.zombie_card_saver.severity import zombie_severity_classifier
+
 
 @pytest.fixture
 def db():

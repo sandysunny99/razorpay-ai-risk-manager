@@ -8,14 +8,15 @@ Applies configurable retention policies:
 - Archives revoked payment tokens and closed security cases
 """
 
-import sys
 from datetime import datetime, timedelta
+import sys
 
 sys.path.insert(0, ".")
 sys.path.insert(0, "backend")
 
 from app.core.database import SessionLocal
-from app.models.entities import CloudflareSecurityEvent, DLPEvent, AuditEvent
+from app.models.entities import AuditEvent, CloudflareSecurityEvent, DLPEvent
+
 
 def run_retention_cleanup(retention_days: int = 90):
     print("=" * 65)
@@ -24,15 +25,15 @@ def run_retention_cleanup(retention_days: int = 90):
 
     db = SessionLocal()
     cutoff = datetime.utcnow() - timedelta(days=retention_days)
-    
+
     try:
         # Clean old telemetry
         cf_cleaned = db.query(CloudflareSecurityEvent).filter(CloudflareSecurityEvent.created_at < cutoff).delete()
         dlp_cleaned = db.query(DLPEvent).filter(DLPEvent.created_at < cutoff).delete()
-        
+
         # Verify audit ledger is intact
         audit_count = db.query(AuditEvent).count()
-        
+
         db.commit()
         print(f"[1] Stale Cloudflare edge events cleaned: {cf_cleaned}")
         print(f"[2] Stale DLP detection events cleaned: {dlp_cleaned}")

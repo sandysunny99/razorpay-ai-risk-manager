@@ -7,20 +7,20 @@ to a pristine initial state without modifying frozen evaluation datasets.
 """
 
 import sys
-from pathlib import Path
 
 sys.path.insert(0, ".")
 sys.path.insert(0, "backend")
 
-from app.core.database import engine, Base, SessionLocal
+from app.core.database import Base, SessionLocal, engine
 from app.db.seed_data import seed_initial_data
 from scripts.release_guard import verify_test_set_hash
+
 
 def reset_demo():
     print("=" * 65)
     print("RAZORPAY AI RISK MANAGER: 1-CLICK DEMO RESET")
     print("=" * 65)
-    
+
     # 1. Verify frozen test set hash
     print("[1] Verifying frozen evaluation test set integrity...")
     if not verify_test_set_hash():
@@ -31,7 +31,7 @@ def reset_demo():
     print("[2] Resetting SQLite database tables & audit ledger...")
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    
+
     db = SessionLocal()
     try:
         seed_initial_data(db)

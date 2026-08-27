@@ -1,11 +1,16 @@
-from typing import List, Dict, Any
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
-from app.zombie_card_saver.service import zombie_card_saver_service
 from app.zombie_card_saver.schemas import (
-    ZombieCardSummary, ZombieStatisticsResponse, ZombieAnalysisResponse, ZombieActionType
+    ZombieActionType,
+    ZombieAnalysisResponse,
+    ZombieCardSummary,
+    ZombieStatisticsResponse,
 )
+from app.zombie_card_saver.service import zombie_card_saver_service
 
 router = APIRouter(prefix="/api/v1/zombie-cards", tags=["Zombie Card Saver"])
 

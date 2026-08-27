@@ -1,6 +1,8 @@
-from typing import Dict, Any, List
 from datetime import datetime, timezone
+from typing import Any, Dict, List
+
 from app.models.entities import Card
+
 
 class CardRiskEngine:
     """

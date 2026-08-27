@@ -1,11 +1,13 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, JSON, ForeignKey, Text
-from sqlalchemy.orm import relationship
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+
 from app.core.database import Base
+
 
 class Merchant(Base):
     __tablename__ = "merchants"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     merchant_id = Column(String(64), unique=True, index=True, nullable=False)
     name = Column(String(128), nullable=False)
@@ -15,7 +17,7 @@ class Merchant(Base):
 
 class Customer(Base):
     __tablename__ = "customers"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(String(64), unique=True, index=True, nullable=False)
     name = Column(String(128), nullable=False)
@@ -28,7 +30,7 @@ class Customer(Base):
 
 class Card(Base):
     __tablename__ = "cards"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     card_id = Column(String(64), unique=True, index=True, nullable=False)
     customer_id = Column(String(64), ForeignKey("customers.customer_id"), nullable=False)
@@ -47,7 +49,7 @@ class Card(Base):
 
 class PaymentToken(Base):
     __tablename__ = "payment_tokens"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     token_id = Column(String(64), unique=True, index=True, nullable=False)
     card_id = Column(String(64), ForeignKey("cards.card_id"), nullable=False)
@@ -61,7 +63,7 @@ class PaymentToken(Base):
 
 class Transaction(Base):
     __tablename__ = "transactions"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     txn_id = Column(String(64), unique=True, index=True, nullable=False)
     customer_id = Column(String(64), ForeignKey("customers.customer_id"), nullable=False)
@@ -80,7 +82,7 @@ class Transaction(Base):
 
 class ThreatSource(Base):
     __tablename__ = "threat_sources"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(128), unique=True, nullable=False)
     source_type = Column(String(64), default="stealer_log")  # dark_web, breach_dump, stealer_log, paste
@@ -90,7 +92,7 @@ class ThreatSource(Base):
 
 class ExposureEvent(Base):
     __tablename__ = "exposure_events"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     card_fingerprint = Column(String(64), index=True, nullable=False)
     bin = Column(String(8), index=True, nullable=False)
@@ -103,7 +105,7 @@ class ExposureEvent(Base):
 
 class RiskAssessment(Base):
     __tablename__ = "risk_assessments"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     assessment_id = Column(String(64), unique=True, index=True, nullable=False)
     transaction_id = Column(String(64), nullable=True)
@@ -117,7 +119,7 @@ class RiskAssessment(Base):
 
 class SecurityCase(Base):
     __tablename__ = "security_cases"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     case_id = Column(String(64), unique=True, index=True, nullable=False)
     severity = Column(String(32), default="CRITICAL")
@@ -136,7 +138,7 @@ class SecurityCase(Base):
 
 class AuditEvent(Base):
     __tablename__ = "audit_events"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(String(64), unique=True, index=True, nullable=False)
     actor = Column(String(64), default="RiskManagerAgent")

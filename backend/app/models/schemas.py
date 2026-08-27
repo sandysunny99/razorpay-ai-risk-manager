@@ -1,6 +1,8 @@
 from datetime import datetime
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
+
 
 class FactorItem(BaseModel):
     name: str

@@ -1,5 +1,6 @@
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List
+
 from app.core.security import luhn_checksum_valid, mask_pan
 
 # Regex patterns for sensitive candidate tokens

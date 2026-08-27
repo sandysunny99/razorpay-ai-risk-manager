@@ -1,7 +1,9 @@
-from typing import Dict, Any
-from app.integrations.razorpay_adapter import RazorpayPaymentAdapter
+from typing import Any, Dict
+
 from app.engines.risk_scorer import RiskScoringEngine
-from app.models.entities import PaymentToken, Card, Customer, Transaction
+from app.integrations.razorpay_adapter import RazorpayPaymentAdapter
+from app.models.entities import Card, Customer, PaymentToken, Transaction
+
 
 class VerificationEngine:
     """
@@ -23,7 +25,7 @@ class VerificationEngine:
     ) -> Dict[str, Any]:
         # 1. Query Gateway for verified state
         gateway_status = await self.razorpay.get_token_status(token.token_id)
-        
+
         is_verified = (gateway_status.get("status") == "REVOKED")
         if not is_verified:
             return {
@@ -44,13 +46,13 @@ class VerificationEngine:
             "is_zombie": False,
             "token_status": "REVOKED"
         }
-        
+
         # Transaction anomaly remains historical log but cannot execute
         transaction_result = {
             "score": 10.0,
             "reasons": ["Historical anomaly recorded; active payment gateway access terminated"]
         }
-        
+
         # Exposure remains historical reference
         exposure_result_recalculated = {
             "score": 45.0,

@@ -1,6 +1,7 @@
-import time
-from typing import Dict, Optional
 import threading
+import time
+from typing import Dict
+
 
 class EventDeduplicator:
     """
@@ -16,7 +17,7 @@ class EventDeduplicator:
     def is_duplicate(self, idempotency_key: str) -> bool:
         if not idempotency_key:
             return False
-        
+
         now = time.time()
         with self._lock:
             # Purge expired entries if cache is growing

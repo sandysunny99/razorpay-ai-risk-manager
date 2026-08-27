@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.core.config import settings
-from app.models.entities import Card, PaymentToken, Transaction, SecurityCase, ExposureEvent
-from app.models.schemas import OverviewMetrics, InvestigationRequest, InvestigationResponse
-from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
+
 from app.agent.risk_agent import RiskManagerAgent
+from app.core.config import settings
+from app.core.database import get_db
 from app.engines.token_risk import TokenRiskEngine
+from app.models.entities import Card, PaymentToken, SecurityCase
+from app.models.schemas import InvestigationRequest, InvestigationResponse, OverviewMetrics
+from app.threat_intel.synthetic_provider import SyntheticThreatIntelProvider
 
 router = APIRouter(prefix="/risk", tags=["Risk Management"])
 
@@ -16,7 +17,7 @@ threat_provider = SyntheticThreatIntelProvider()
 def get_risk_overview(db: Session = Depends(get_db)):
     cards_count = db.query(Card).count()
     tokens_count = db.query(PaymentToken).count()
-    
+
     # Calculate Zombie Tokens count
     tokens_with_cards = (
         db.query(PaymentToken, Card)
@@ -25,10 +26,10 @@ def get_risk_overview(db: Session = Depends(get_db)):
     )
     token_engine = TokenRiskEngine()
     zombies = token_engine.detect_zombie_tokens(tokens_with_cards)
-    
+
     open_cases = db.query(SecurityCase).filter(SecurityCase.status == "OPEN").count()
     critical_cases = db.query(SecurityCase).filter(SecurityCase.severity == "CRITICAL").count()
-    
+
     return OverviewMetrics(
         cards_monitored=cards_count,
         tokens_monitored=tokens_count,
@@ -46,7 +47,7 @@ async def investigate_target(req: InvestigationRequest, db: Session = Depends(ge
     agent = RiskManagerAgent(db=db, threat_provider=threat_provider)
     if not req.transaction_id:
         req.transaction_id = "TXN-2026-9042"
-    
+
     try:
         response = await agent.investigate_transaction(req.transaction_id)
         return response
