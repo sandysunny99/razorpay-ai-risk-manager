@@ -36,7 +36,7 @@ class Settings(BaseSettings):
             return self.HMAC_SECRET_KEY
         if self._ephemeral_secret is not None:
             return self._ephemeral_secret
-        import warnings, secrets
+        import warnings
         warnings.warn(
             "HMAC_SECRET_KEY not set — using ephemeral random key. Set HMAC_SECRET_KEY env var for stable production operation.",
             RuntimeWarning,
