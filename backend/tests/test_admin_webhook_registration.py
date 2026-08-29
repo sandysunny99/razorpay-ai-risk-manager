@@ -1,13 +1,14 @@
-import pytest
 import uuid
 
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy.orm import Session
 
-from app.main import app
+from app.core.auth import Role, create_access_token, verify_role
 from app.core.database import SessionLocal, get_db
+from app.main import app
 from app.models.entities import Merchant, MerchantWebhookRegistration
-from app.core.auth import Role, verify_role, create_access_token
+
 
 @pytest.fixture
 def client():

@@ -14,6 +14,7 @@ Fixes applied in this version:
   Phase 4   — SSE stream router registered
   Phase 2   — Sentry error monitoring (optional), Redis rate limiting (optional)
 """
+
 import logging
 import os
 import re
@@ -28,9 +29,9 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from app.api.routes_admin_webhook import router as admin_router
 from app.api.routes_audit import router as audit_router
 from app.api.routes_auth import router as auth_router
-from app.api.routes_admin_webhook import router as admin_router
 from app.api.routes_cards import router as cards_router
 from app.api.routes_cases import router as cases_router
 from app.api.routes_demo import router as demo_router
@@ -44,7 +45,6 @@ from app.api.routes_tokens import router as tokens_router
 from app.api.routes_webhook import router as live_webhook_router
 from app.api.routes_webhooks import router as webhooks_router
 from app.api.routes_zombie_cards import router as zombie_router
-
 from app.core.config import settings
 from app.core.database import SessionLocal, init_db
 from app.core.telemetry import setup_telemetry
