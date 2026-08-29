@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.events.event_bus import event_bus
 from app.events.event_normalizer import EventNormalizer
 from app.integrations.razorpay_adapter import RazorpayTestAdapter
-from app.models.entities import WebhookEvent
+from app.models.entities import MerchantWebhookRegistration, WebhookEvent
 from app.security.dlp import DLPEngine
 
 router = APIRouter(prefix="/api/v1/webhooks", tags=["Webhooks"])
@@ -144,3 +144,99 @@ async def receive_razorpay_webhook(
         "dlp_clean": len(dlp_violations) == 0,
         "processed": True,
     }
+@router.post("/razorpay/{endpoint_id}")
+async def receive_razorpay_webhook_controlled(
+    endpoint_id: str,
+    request: Request,
+    x_razorpay_signature: Optional[str] = Header(None),
+    x_razorpay_event_id: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """Server‑controlled webhook endpoint.
+
+    Looks up the MerchantWebhookRegistration by endpoint_id, verifies the HMAC‑SHA256
+    signature using the registration's secret, performs idempotency, DLP scanning,
+    normalisation and publishes the event. Returns 200 on success.
+    """
+    # 1. Retrieve registration
+    registration = db.query(MerchantWebhookRegistration).filter(
+        MerchantWebhookRegistration.endpoint_id == endpoint_id,
+        MerchantWebhookRegistration.active,
+    ).first()
+    if not registration:
+        raise HTTPException(status_code=404, detail="Webhook endpoint not found")
+
+    raw_body = await request.body()
+    signature = (
+        x_razorpay_signature
+        or request.headers.get("x-razorpay-signature")
+        or request.headers.get("X-Razorpay-Signature")
+    )
+    if not signature:
+        raise HTTPException(status_code=401, detail="Missing signature header")
+    # Verify using registration secret
+    if not RazorpayTestAdapter.verify_webhook_signature(raw_body, signature, secret=registration.secret):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+    # 2. Idempotency key handling
+    event_id = (
+        x_razorpay_event_id
+        or request.headers.get("x-razorpay-event-id")
+        or request.headers.get("X-Razorpay-Event-Id")
+    )
+    event_key = event_id or hashlib.sha256(raw_body).hexdigest()
+    existing_event = db.query(WebhookEvent).filter(WebhookEvent.event_id == event_key).first()
+    if existing_event:
+        from datetime import timedelta
+        if existing_event.status == "PROCESSED" and existing_event.processed_at:
+            if datetime.utcnow() - existing_event.processed_at < timedelta(seconds=30):
+                return {"status": "DUPLICATE_IGNORED", "event_id": existing_event.event_id, "processed": False}
+        db.delete(existing_event)
+        db.commit()
+
+    # 3. Parse payload
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    # 4. DLP scan
+    dlp_violations = DLPEngine.scan_for_violations(payload)
+    sanitized_payload = DLPEngine.sanitize(payload)
+
+    # 5. Normalise & publish
+    event_name = sanitized_payload.get("event", "payment.authorized")
+    sec_event = EventNormalizer.normalize_razorpay_webhook(sanitized_payload, event_name)
+    sec_event.metadata["dlp_violations_count"] = len(dlp_violations)
+    # Attach merchant info
+    sec_event.metadata["merchant_id"] = registration.merchant_id
+    event_bus.publish(sec_event)
+
+    # 6. Persist webhook event
+    payload_hash = hashlib.sha256(raw_body).hexdigest()
+    new_event = WebhookEvent(
+        event_id=event_key,
+        merchant_id=registration.merchant_id,
+        event_type="razorpay",
+        payload_hash=payload_hash,
+        signature=signature,
+        status="RECEIVED",
+        received_at=datetime.utcnow(),
+        processed_at=None,
+    )
+    db.add(new_event)
+    db.commit()
+    db.refresh(new_event)
+    # Mark processed
+    new_event.status = "PROCESSED"
+    new_event.processed_at = datetime.utcnow()
+    db.commit()
+
+    return {
+        "status": "INGESTED",
+        "event_id": sec_event.event_id,
+        "event_type": sec_event.event_type,
+        "dlp_clean": len(dlp_violations) == 0,
+        "processed": True,
+    }
+

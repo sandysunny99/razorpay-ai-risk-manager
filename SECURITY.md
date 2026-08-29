@@ -1,8 +1,8 @@
-# Razorpay Risk Manager Agent: Security Architecture & Controls
+# Netvrio Agent: Security Architecture & Controls
 
 ## 1. HMAC-SHA-256 Card Fingerprinting
 
-In traditional payment systems, matching credit cards against compromised data dumps creates severe compliance and data-leak risks. The Razorpay Risk Manager Agent solves this with **HMAC-SHA-256 Card Fingerprinting**:
+In traditional payment systems, matching credit cards against compromised data dumps creates severe compliance and data-leak risks. The Netvrio Agent solves this with **HMAC-SHA-256 Card Fingerprinting**:
 
 ```
 RAW PAN (4111 1111 1111 4921)

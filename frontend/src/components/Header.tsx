@@ -63,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center space-x-3">
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                RAZORPAY <span className="text-blue-400 font-semibold">AI RISK MANAGER</span>
+                NETVRIO <span className="text-blue-400 font-semibold">AI RISK PLATFORM</span>
               </h1>
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30">
                 v2.1.0

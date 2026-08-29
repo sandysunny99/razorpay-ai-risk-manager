@@ -14,6 +14,7 @@ Fixes applied in this version:
   Phase 4   — SSE stream router registered
   Phase 2   — Sentry error monitoring (optional), Redis rate limiting (optional)
 """
+
 import logging
 import os
 import re
@@ -28,6 +29,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from app.api.routes_admin_webhook import router as admin_router
 from app.api.routes_audit import router as audit_router
 from app.api.routes_auth import router as auth_router
 from app.api.routes_cards import router as cards_router
@@ -222,6 +224,7 @@ app.include_router(zombie_router)
 app.include_router(webhooks_router)
 app.include_router(live_webhook_router)
 app.include_router(stream_router)     # Phase 4: SSE stream
+app.include_router(admin_router)
 
 # ─── Static SPA serving ───────────────────────────────────────────────────
 _frontend_dist = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
