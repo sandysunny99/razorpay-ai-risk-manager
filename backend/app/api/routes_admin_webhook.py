@@ -4,9 +4,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.auth import Role, verify_role
 from app.core.database import get_db
 from app.models.entities import Merchant, MerchantWebhookRegistration
-from app.security.auth import Role, verify_role
 
 router = APIRouter(prefix="/admin", tags=["Admin Webhook Registration"])
 

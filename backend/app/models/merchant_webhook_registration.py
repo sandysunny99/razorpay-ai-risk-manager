@@ -1,7 +1,9 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+
 from app.core.database import Base
+
 
 class MerchantWebhookRegistration(Base):
     __tablename__ = "merchant_webhook_registrations"

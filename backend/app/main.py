@@ -30,6 +30,7 @@ from slowapi.util import get_remote_address
 
 from app.api.routes_audit import router as audit_router
 from app.api.routes_auth import router as auth_router
+from app.api.routes_admin_webhook import router as admin_router
 from app.api.routes_cards import router as cards_router
 from app.api.routes_cases import router as cases_router
 from app.api.routes_demo import router as demo_router
@@ -43,6 +44,7 @@ from app.api.routes_tokens import router as tokens_router
 from app.api.routes_webhook import router as live_webhook_router
 from app.api.routes_webhooks import router as webhooks_router
 from app.api.routes_zombie_cards import router as zombie_router
+
 from app.core.config import settings
 from app.core.database import SessionLocal, init_db
 from app.core.telemetry import setup_telemetry
@@ -222,6 +224,7 @@ app.include_router(zombie_router)
 app.include_router(webhooks_router)
 app.include_router(live_webhook_router)
 app.include_router(stream_router)     # Phase 4: SSE stream
+app.include_router(admin_router)
 
 # ─── Static SPA serving ───────────────────────────────────────────────────
 _frontend_dist = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
