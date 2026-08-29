@@ -16,7 +16,7 @@ Netvrio provides a payment‑risk engine that ingests transaction events, enrich
 - Merchant‑aware webhook registration with per‑merchant HMAC‑SHA‑256 secrets.
 - Merchant‑scoped authorization and tenant attribution are enforced in the verified R‑002 webhook path.
 - Auditable event and decision metadata.
-- Zombie Card Saver detects and mitigates suspicious card‑reuse activity (4/4 tests PASS).
+- Zombie Card Saver for suspicious card reuse.
 - Verified security controls backed by targeted tests and CI.
 
 ## Architecture
@@ -48,7 +48,47 @@ The engine uses deterministic scoring rules and can optionally incorporate LLM�
 - **Audit attribution** linking each event to merchant and policy.
 
 ## Zombie Card Saver
-Detects and mitigates suspicious card‑reuse activity. All 4/4 tests pass.
+
+### What it does
+Netvrio includes a dedicated Zombie Card Saver subsystem for detecting and responding to suspicious card-reuse activity.
+
+### Detection Flow
+```text
+Suspicious Card Activity
+          |
+          v
+   Zombie Detection
+          |
+          v
+ Lifecycle / Status
+          |
+          v
+ Severity + Impact
+          |
+          v
+ Recommendation
+          |
+          v
+ Remediation
+```
+
+### Security Capabilities
+
+The current Zombie Card Saver implementation covers:
+
+- Zombie-card detection
+- Lifecycle/status handling
+- Severity classification
+- Impact analysis
+- Recommendation generation
+- Remediation execution
+
+### Verification
+
+**4/4 tests PASS**
+
+Test suite:
+`backend/tests/test_zombie_card_saver.py`
 
 ## Evaluation Results
 
@@ -130,4 +170,4 @@ GitHub Actions run:
 - **Future**: Formal CodeQL SARIF access, production deployment validation.
 
 ## Hackathon Summary
-Netvrio delivers autonomous payment‑risk analysis with merchant‑aware controls, protected webhooks, policy‑controlled remediation, and auditable decisions. The solution is backed by verified tests, CI, and security evidence, making it a strong candidate for the hackathon evaluation.
+Netvrio delivers autonomous payment-risk analysis with merchant-aware controls, protected webhooks, Zombie Card Saver for suspicious card reuse, policy-controlled remediation, and auditable decisions. The solution is backed by verified tests, CI, and security evidence, making it a strong candidate for the hackathon evaluation.
