@@ -1,15 +1,16 @@
-# Razorpay AI Risk Manager
+# Netvrio
+**AI Payment Risk & Security Platform**
 
-**Razorpay AI Risk Manager is a payment‑risk platform that combines transaction risk scoring, merchant‑aware security controls, protected webhooks, policy‑based remediation, and auditable security decisions.**
+**Netvrio is a payment-risk platform that combines transaction risk scoring, merchant-aware security controls, protected webhooks, policy-controlled remediation, and auditable security decisions.**
 
-[![GitHub CI](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/sandysunny99/razorpay-ai-risk-manager/actions)
+[![GitHub CI](https://github.com/sandysunny99/netvrio/actions/workflows/ci.yml/badge.svg)](https://github.com/sandysunny99/netvrio/actions)
 [![License: Apache‑2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 ## Problem
 Payment processors face sophisticated fraud attacks that require real‑time risk assessment, secure webhook handling, and evidence‑based decision making across multiple merchants.
 
 ## Solution
-Razorpay AI Risk Manager provides a payment‑risk engine that ingests transaction events, enriches them with contextual evidence, scores risk, applies policy decisions, and remediates automatically while preserving auditability.
+Netvrio provides a payment‑risk engine that ingests transaction events, enriches them with contextual evidence, scores risk, applies policy decisions, and remediates automatically while preserving auditability.
 
 ## What Makes It Different
 - Merchant‑aware webhook registration with per‑merchant HMAC‑SHA‑256 secrets.
@@ -129,4 +130,4 @@ GitHub Actions run:
 - **Future**: Formal CodeQL SARIF access, production deployment validation.
 
 ## Hackathon Summary
-Razorpay AI Risk Manager delivers autonomous payment‑risk analysis with merchant‑aware controls, protected webhooks, policy‑controlled remediation, and auditable decisions. The solution is backed by verified tests, CI, and security evidence, making it a strong candidate for the hackathon evaluation.
+Netvrio delivers autonomous payment‑risk analysis with merchant‑aware controls, protected webhooks, policy‑controlled remediation, and auditable decisions. The solution is backed by verified tests, CI, and security evidence, making it a strong candidate for the hackathon evaluation.

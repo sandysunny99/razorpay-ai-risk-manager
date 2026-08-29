@@ -1,6 +1,6 @@
 ﻿# Project Mapping for Cybersecurity Skills
 
-| Skill | Razorpay AI Risk Manager Workflow | Status |
+| Skill | Netvrio Workflow | Status |
 |-------|-----------------------------------|--------|
 | collecting‑indicators‑of‑compromise | Incident‑response IOC collection & sharing reference | GUIDANCE |
 | implementing‑devsecops‑security‑scanning | CI/CD security‑gate guidance (Gitleaks, Semgrep, Trivy) | GUIDANCE |
