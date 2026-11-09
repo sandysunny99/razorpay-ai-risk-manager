@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 from backend.risk.features import extract_features
 from backend.risk.models import RiskAssessment, RiskFactor
-from backend.risk.rules import evaluate_amount, evaluate_velocity
+from backend.risk.rules import evaluate_amount, evaluate_threat_intel, evaluate_velocity
 
 
 class DeterministicRiskEngine:
@@ -19,6 +19,10 @@ class DeterministicRiskEngine:
         factor_velocity = evaluate_velocity(features['velocity_1h'])
         if factor_velocity.score_impact > 0:
             factors.append(factor_velocity)
+
+        factor_ti = evaluate_threat_intel(event_data.get('threat_matches') or [])
+        if factor_ti.score_impact > 0:
+            factors.append(factor_ti)
 
         total_score = min(100.0, sum(f.score_impact for f in factors))
         risk_level = "HIGH" if total_score >= 70.0 else "MEDIUM" if total_score >= 30.0 else "LOW"

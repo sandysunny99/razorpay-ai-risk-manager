@@ -9,18 +9,21 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from backend.api.routes import audit, cases, health, live, razorpay, risk, webhooks
+from backend.api.routes import audit, cases, health, intel, live, razorpay, risk, webhooks, youpi
 from backend.observability.middleware import SecurityObservabilityMiddleware
 from backend.realtime.generator import all_generators, get_generator
+from backend.runtime_env import demo_mode_enabled, is_production
+from backend.threat_intel.service import threat_intel
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Optional: start live synthetic traffic for the demo tenant as soon as the API boots.
-    demo = os.getenv("NETVRIO_DEMO_MODE", "false").lower() == "true"
-    if demo and os.getenv("NETVRIO_ENV", "test").lower() != "production" and             os.getenv("NETVRIO_LIVE_AUTOSTART", "false").lower() == "true":
+    if demo_mode_enabled() and os.getenv("NETVRIO_LIVE_AUTOSTART", "false").lower() == "true":
         get_generator(os.getenv("NETVRIO_LIVE_TENANT", "tenant_123")).start()
+    threat_intel.start_background_refresh()  # no-op unless NETVRIO_TI_LIVE_FEEDS=true
     yield
+    await threat_intel.stop()
     for gen in all_generators():
         await gen.stop()
 
@@ -60,7 +63,7 @@ def _resolve_allowed_origins() -> list[str]:
     configured = os.environ.get("CORS_ALLOWED_ORIGINS", "")
     if configured:
         return [o.strip() for o in configured.split(",") if o.strip()]
-    if os.environ.get("NETVRIO_ENV", "test").lower() == "production":
+    if is_production():
         return []  # Production must opt in explicitly.
     return list(_DEV_ORIGINS)
 
@@ -80,13 +83,15 @@ app.include_router(risk.router, prefix="/risk", tags=["Risk"])
 app.include_router(cases.router, prefix="/cases", tags=["Cases"])
 app.include_router(audit.router, prefix="/audit", tags=["Audit"])
 app.include_router(live.router, prefix="/live", tags=["Live"])
+app.include_router(intel.router, prefix="/intel", tags=["Threat Intel"])
 app.include_router(razorpay.router, prefix="/integrations/razorpay", tags=["Razorpay"])
+app.include_router(youpi.router, prefix="/integrations/youpi", tags=["YouPI-PG"])
 
 
 # ── Optional: serve the built dashboard (single-container deploys) ──────────
 # Frontend routes deliberately avoid the API prefixes (/health, /audit, ...).
 _DIST = Path(os.environ.get("NETVRIO_FRONTEND_DIST", Path(__file__).resolve().parents[2] / "frontend" / "dist"))
-_SPA_ROUTES = ("/", "/ledger", "/integrations")
+_SPA_ROUTES = ("/", "/threats", "/ledger", "/integrations")
 
 if (_DIST / "index.html").is_file():
     if (_DIST / "assets").is_dir():

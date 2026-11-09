@@ -26,11 +26,15 @@ from backend.realtime.velocity import behaviour_tracker
 from backend.risk.engine import DeterministicRiskEngine
 from backend.risk.models import ActionDecision
 from backend.risk.zombie_card_saver import ZombieCardSaver
+from backend.runtime_env import demo_mode_enabled
 from backend.security.dlp import redact_sensitive_data
 from backend.security.hmac import verify_hmac_sha256
 from backend.security.idempotency import get_idempotency_store
 from backend.security.replay import verify_replay
 from backend.security.tenant import TenantContext
+from backend.threat_intel.exposure import exposure_store
+from backend.threat_intel.service import threat_intel
+from backend.threat_intel.store import ThreatMatch
 
 router = APIRouter()
 
@@ -68,9 +72,7 @@ class DemoWebhookPayload(BaseModel):
 @router.post("/demo/sign")
 async def sign_demo_payload(payload: DemoWebhookPayload):
     # Phase 2: Enforce BOTH NETVRIO_ENV != production AND NETVRIO_DEMO_MODE=true
-    env = os.getenv("NETVRIO_ENV", "development").lower()
-    demo_mode = os.getenv("NETVRIO_DEMO_MODE", "false").lower() == "true"
-    if env == "production" or not demo_mode:
+    if not demo_mode_enabled():
         raise HTTPException(status_code=404, detail="Not Found")
 
     secret = get_webhook_secret().encode("utf-8")
@@ -130,7 +132,7 @@ def run_pipeline(
     Used by the HTTP webhook route, the live traffic generator and the Razorpay adapter so every
     event — synthetic or real — goes through identical controls.
     """
-    with tracer.start_as_current_span("process_payment_webhook") as span:
+    with tracer.start_as_current_span("process_payment_webhook", record_exception=False) as span:
         span.set_attribute("tenant_id", tenant_id)
         span.set_attribute("correlation_id", correlation_id)
 
@@ -148,7 +150,8 @@ def run_pipeline(
                 raise HTTPException(status_code=403, detail="Tenant mismatch")
         except ValidationError:
             span.set_attribute("status", "error_validation")
-            raise HTTPException(status_code=400, detail="Schema validation failed")
+            # `from None` drops the pydantic chain: its message embeds the raw rejected values.
+            raise HTTPException(status_code=400, detail="Schema validation failed") from None
 
         # 2b. Raw PAN is rejected before any state is mutated (idempotency, risk, audit)
         if payload_obj.card_pan or payload_obj.pan:
@@ -196,25 +199,41 @@ def run_pipeline(
                 risk_input["velocity_1h"] = max(risk_input["velocity_1h"], observed["velocity_1h"])
             if observed["recent_reuse_count"] is not None:
                 zombie_input["recent_reuse_count"] = max(zombie_input["recent_reuse_count"], observed["recent_reuse_count"])
+
+            # 6c. Threat intelligence (local indicator store; evidence only, policy still decides)
+            raw_data = payload_obj.data if isinstance(payload_obj.data, dict) else {}
+            credential_ref = payload_obj.token or payload_obj.fingerprint
+            ti_matches = threat_intel.assess(tenant_id, payload_obj.event_id, raw_data.get("ip_address"), credential_ref)
+            risk_input["threat_matches"] = [(m.category, m.confidence) for m in ti_matches if m.indicator_type == "ip"]
+            if any(m.category == "revoked_token" for m in ti_matches):
+                zombie_input["token_revoked"] = True
+
+            # 6d. Card exposure monitoring (fingerprints reported by the exposure collector)
+            exposure = exposure_store.is_exposed(tenant_id, payload_obj.token, payload_obj.fingerprint)
+            if exposure:
+                zombie_input["trusted_compromise_assertion"] = True
+                ti_matches.append(ThreatMatch("card", exposure.fingerprint[:7] + "…", exposure.source,
+                                              "card_exposed", exposure.confidence))
+            exposure_store.link(tenant_id, payload_obj.token, payload_obj.fingerprint)
             evidence_input = normalize_evidence_input(payload_obj, safe_payload)
 
             # 7. Deterministic Risk
-            with tracer.start_as_current_span("deterministic_risk"):
+            with tracer.start_as_current_span("deterministic_risk", record_exception=False):
                 risk_assessment = risk_engine.analyze(risk_input, correlation_id)
                 span.set_attribute("risk_score", risk_assessment.risk_score)
                 span.set_attribute("risk_level", risk_assessment.risk_level)
 
             # 8. Zombie Card Saver
-            with tracer.start_as_current_span("zombie_card_saver"):
+            with tracer.start_as_current_span("zombie_card_saver", record_exception=False):
                 zombie_ref = payload_obj.token or payload_obj.fingerprint or "unknown"
                 zombie_assessment = zombie_saver.analyze(zombie_ref, tenant_id, merchant_id, zombie_input)
 
             # 9. Evidence Creation
-            with tracer.start_as_current_span("evidence_builder"):
+            with tracer.start_as_current_span("evidence_builder", record_exception=False):
                 evidence = evidence_builder.build(evidence_input, risk_assessment.risk_factors, zombie_assessment)
 
             # 10. LLM Advisory
-            with tracer.start_as_current_span("llm_advisory") as llm_span:
+            with tracer.start_as_current_span("llm_advisory", record_exception=False) as llm_span:
                 # Compile trusted evidence IDs for validation
                 trusted_evidence_ids = {event_id}
                 if evidence and hasattr(evidence, 'evidence_id'):
@@ -261,7 +280,7 @@ def run_pipeline(
 
 
             # 11. Deterministic Policy Engine
-            with tracer.start_as_current_span("policy_engine"):
+            with tracer.start_as_current_span("policy_engine", record_exception=False):
                 sec_valid = SecurityValidationResult(is_valid_signature=True, is_idempotent=True, is_not_replayed=True, is_valid_tenant=True)
                 merchant_policy = MerchantPolicy(merchant_id=merchant_id, auto_block_threshold=90.0, auto_review_threshold=50.0, require_step_up_for_zombie=True)
 
@@ -279,8 +298,17 @@ def run_pipeline(
                 )
                 span.set_attribute("decision", policy_decision.decision)
 
+            # 11b. Feed confirmed outcomes back into threat intelligence
+            threat_intel.learn(
+                tenant_id,
+                token=credential_ref,
+                ip_address=raw_data.get("ip_address"),
+                zombie_recommendation=getattr(zombie_assessment.recommendation, "value", zombie_assessment.recommendation),
+                compromised_source="COMPROMISED_SOURCE" in zombie_assessment.signals,
+            )
+
             # 12. Persistent Audit
-            with tracer.start_as_current_span("audit_log"):
+            with tracer.start_as_current_span("audit_log", record_exception=False):
                 audit_record = {
                     "audit_id": f"aud_{tenant_id}_{event_id}",
                     "event_id": event_id,
@@ -293,6 +321,7 @@ def run_pipeline(
                     "risk_score": risk_assessment.risk_score,
                     "risk_level": risk_assessment.risk_level,
                     "zombie_detected": len(getattr(zombie_assessment, "signals", [])) > 0,
+                    "threat_matches": [{"source": m.source, "category": m.category} for m in ti_matches],
                 }
                 audit_hash = audit_repo.append_record(audit_record)
 
@@ -306,6 +335,7 @@ def run_pipeline(
                 "evidence_ids": risk_assessment.evidence_ids,
                 "audit_id": audit_record["audit_id"],
                 "audit_hash": audit_hash,
+                "threat_intel": [m.to_dict() for m in ti_matches],
                 "zombie_signal": {
                     "impact": getattr(zombie_assessment, 'impact', None),
                     "severity": getattr(zombie_assessment, 'severity', None),
@@ -331,6 +361,7 @@ def _event_summary(result: dict, payload_meta: dict) -> dict:
         "risk_factors": [f.get("name") for f in risk.get("risk_factors", [])],
         "zombie": result.get("zombie_signal"),
         "ai_provider": (result.get("ai_advisory") or {}).get("provider", "UNAVAILABLE"),
+        "threat": result.get("threat_intel") or [],
         "audit_id": result.get("audit_id"),
         **payload_meta,
     }

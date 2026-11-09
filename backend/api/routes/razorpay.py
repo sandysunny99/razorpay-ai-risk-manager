@@ -9,18 +9,14 @@ leave this function) → re-sign with the internal webhook secret → run the *s
 pipeline used by every other event, then publish to the live stream.
 """
 import hashlib
-import hmac
 import json
 import os
 import threading
 import time
-import uuid
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
 
-from backend.api.dependencies import get_webhook_secret
-from backend.api.routes.webhooks import process_and_publish
+from backend.api.routes.gateway_common import run_gateway_event
 from backend.security.hmac import verify_hmac_sha256
 
 router = APIRouter()
@@ -105,15 +101,7 @@ async def razorpay_webhook(request: Request):
         _bump("ignored")
         return {"status": "ignored", "reason": "unsupported event type"}
 
-    internal_secret = get_webhook_secret()
-    internal_body = json.dumps(normalized, separators=(",", ":")).encode("utf-8")
-    internal_sig = hmac.new(internal_secret.encode("utf-8"), internal_body, hashlib.sha256).hexdigest()
-    correlation_id = getattr(request.state, "correlation_id", f"corr_{uuid.uuid4()}")
-    result = process_and_publish(
-        internal_body, internal_sig, tenant_id, internal_secret, correlation_id,
-        source="razorpay", scenario=normalized["event_type"],
-    )
-    return JSONResponse(result)
+    return run_gateway_event(normalized, tenant_id, request, source="razorpay", scenario=normalized["event_type"])
 
 
 @router.get("/status")

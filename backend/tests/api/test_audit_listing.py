@@ -85,3 +85,53 @@ def test_demo_signed_body_verifies_verbatim(monkeypatch):
                        headers={"x-signature": signed["signature"], "x-tenant-id": tenant,
                                 "content-type": "application/json"})
     assert resp.status_code == 200
+
+
+def test_incremental_verification_detects_tampering_of_new_rows():
+    from backend.audit.audit_log import SqlAuditRepository
+
+    repo = SqlAuditRepository("sqlite:///:memory:")
+    for i in range(3):
+        repo.append_record({"audit_id": f"a{i}", "event_id": f"e{i}", "merchant_id": "m", "correlation_id": "c",
+                            "timestamp": i, "decision": "ALLOW"})
+    assert repo.verify_chain_incremental() is True
+    repo.append_record({"audit_id": "a3", "event_id": "e3", "merchant_id": "m", "correlation_id": "c",
+                        "timestamp": 3, "decision": "ALLOW"})
+    with repo.Session() as s:
+        from backend.audit.audit_log import AuditRecordModel
+        row = s.query(AuditRecordModel).filter_by(audit_id="a3").one()
+        row.record_payload = {**row.record_payload, "decision": "BLOCK"}  # tamper
+        s.commit()
+    assert repo.verify_chain_incremental() is False
+    assert repo.verify_chain() is False
+
+
+def test_full_verify_endpoint():
+    resp = client.get("/audit/verify", headers={"x-tenant-id": "tenant_any"})
+    assert resp.status_code == 200 and resp.json()["scope"] == "full"
+
+
+def test_review_resolution_is_audited_once_and_tenant_scoped():
+    tenant = f"t_res_{uuid.uuid4().hex[:6]}"
+    review = _post(tenant, {"amount": 15000})
+    assert review["decision"] == "REVIEW"
+    allow = _post(tenant, {"amount": 100})
+    aid = review["audit_id"]
+
+    other = client.post(f"/audit/{aid}/resolution", json={"action": "APPROVE"}, headers={"x-tenant-id": "t_other"})
+    assert other.status_code == 404
+    assert client.post(f"/audit/{allow['audit_id']}/resolution", json={"action": "APPROVE"},
+                       headers={"x-tenant-id": tenant}).status_code == 409
+    assert client.post(f"/audit/{aid}/resolution", json={"action": "MAYBE"},
+                       headers={"x-tenant-id": tenant}).status_code == 422
+
+    ok = client.post(f"/audit/{aid}/resolution", json={"action": "DECLINE"}, headers={"x-tenant-id": tenant})
+    assert ok.status_code == 200 and ok.json()["resolution"] == "DECLINE"
+    again = client.post(f"/audit/{aid}/resolution", json={"action": "APPROVE"}, headers={"x-tenant-id": tenant})
+    assert again.status_code == 409
+
+    rec = client.get(f"/audit/{aid}", headers={"x-tenant-id": tenant}).json()
+    assert rec["resolution"]["action"] == "DECLINE" and rec["chain_verified"] is True
+    listed = client.get("/audit", headers={"x-tenant-id": tenant}).json()["items"]
+    assert len(listed) == 2  # resolution records are not listed as decisions
+    assert client.get("/audit/summary", headers={"x-tenant-id": tenant}).json()["total"] == 2

@@ -21,7 +21,8 @@ class SecurityObservabilityMiddleware(BaseHTTPMiddleware):
 
         with tracer.start_as_current_span(
             f"{request.method} {request.url.path}",
-            attributes={"correlation_id": correlation_id}
+            attributes={"correlation_id": correlation_id},
+            record_exception=False,  # tracebacks may contain request data; only the class is recorded
         ) as span:
             start_time = time.time()
             try:

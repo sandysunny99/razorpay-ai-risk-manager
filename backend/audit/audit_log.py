@@ -42,6 +42,10 @@ class SqlAuditRepository(AuditRepository):
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
         self._append_lock = threading.Lock() # Fixes SQLite concurrency within process
+        self._verify_lock = threading.Lock()
+        self._verified_id = 0               # highest row id whose hash link has been verified
+        self._verified_hash = "GENESIS"
+        self._broken = False
 
     def append_record(self, record: Dict[str, Any]) -> str:
         with self._append_lock:
@@ -76,4 +80,31 @@ class SqlAuditRepository(AuditRepository):
                 if recalculated != r.current_hash:
                     return False
                 expected_prev = r.current_hash
+            return True
+
+    def verify_chain_incremental(self) -> bool:
+        """Verify only rows appended since the last check (O(new rows) instead of O(ledger)).
+
+        Rows already verified are not re-hashed, so out-of-band edits to old rows are caught by
+        the full ``verify_chain()`` (exposed as GET /audit/verify), not by this hot-path check.
+        Once a break is found the result stays False.
+        """
+        with self._verify_lock:
+            if self._broken:
+                return False
+            with self.Session() as session:
+                rows = (
+                    session.query(AuditRecordModel)
+                    .filter(AuditRecordModel.id > self._verified_id)
+                    .order_by(AuditRecordModel.id.asc())
+                    .all()
+                )
+                expected_prev = self._verified_hash
+                for r in rows:
+                    if r.previous_hash != expected_prev or canonical_hash(r.record_payload, expected_prev) != r.current_hash:
+                        self._broken = True
+                        return False
+                    expected_prev = r.current_hash
+                    self._verified_id = r.id
+                self._verified_hash = expected_prev
             return True

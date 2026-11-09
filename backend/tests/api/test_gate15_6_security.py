@@ -123,17 +123,15 @@ def test_prompt_injection_isolation(monkeypatch):
 
 # PHASE 7: TELEMETRY REAL VERIFICATION
 def test_telemetry_no_leakage_exporter():
-    from opentelemetry import trace
-    from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-    # Setup test exporter
+    from backend.observability.tracing import add_span_processor
+
+    # Attach to the app's real provider. (Installing a second global TracerProvider is ignored by
+    # OpenTelemetry, which made this test pass without capturing any span.)
     test_exporter = InMemorySpanExporter()
-    processor = SimpleSpanProcessor(test_exporter)
-    provider = TracerProvider()
-    provider.add_span_processor(processor)
-    trace.set_tracer_provider(provider)
+    add_span_processor(SimpleSpanProcessor(test_exporter))
 
     pan = "4111" + "2222" + "3333" + "4444"
     payload = {"event_id": f"tel_{str(uuid.uuid4())[:8]}", "merchant_id": "tenant_123", "timestamp": int(time.time()), "data": {"amount": 100}, "card_pan": pan}
@@ -143,6 +141,7 @@ def test_telemetry_no_leakage_exporter():
     assert resp.status_code == 400
 
     spans = test_exporter.get_finished_spans()
+    assert spans, "exporter captured no spans; the leak check would be vacuous"
     found_pan = False
     found_dummy = False
     for span in spans:

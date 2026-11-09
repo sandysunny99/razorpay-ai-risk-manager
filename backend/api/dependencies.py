@@ -3,6 +3,8 @@ import os
 
 from fastapi import HTTPException, Request
 
+from backend.runtime_env import is_test_env
+
 
 class TenantAuthProvider(ABC):
     @abstractmethod
@@ -24,7 +26,7 @@ class ProductionTenantAuthProvider(TenantAuthProvider):
 
 def get_tenant_auth_provider() -> TenantAuthProvider:
     auth_mode = os.environ.get("NETVRIO_TENANT_AUTH_MODE", "TEST")
-    if auth_mode == "TEST" and os.environ.get("NETVRIO_ENV", "test") == "test":
+    if auth_mode == "TEST" and is_test_env():
         return TestTenantAuthProvider()
     return ProductionTenantAuthProvider()
 
@@ -35,9 +37,8 @@ def get_current_tenant(request: Request):
 
 def get_webhook_secret() -> str:
     secret = os.environ.get("WEBHOOK_SECRET")
-    env = os.environ.get("NETVRIO_ENV", "test")
     if not secret:
-        if env == "test":
+        if is_test_env():
             return "dummy_webhook_secret"
         raise HTTPException(status_code=500, detail="Server Configuration Error: Missing WEBHOOK_SECRET")
     return secret

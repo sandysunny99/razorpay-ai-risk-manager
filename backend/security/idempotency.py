@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 import os
 import threading
-from typing import Set
+import time
+from typing import Dict
 
 import redis
+
+from backend.runtime_env import is_test_env
 
 
 class IdempotencyStore(ABC):
@@ -18,8 +21,13 @@ class IdempotencyStore(ABC):
         pass
 
 class InMemoryIdempotencyStore(IdempotencyStore):
+    """Single-process store. Bounded: keys older than RETENTION_S are pruned once MAX_KEYS is hit.
+    Retention is far longer than the 300 s replay window, so pruning never re-opens a replay."""
+    MAX_KEYS = 200_000
+    RETENTION_S = 24 * 3600
+
     def __init__(self):
-        self._events: Set[str] = set()
+        self._events: Dict[str, float] = {}
         self._lock = threading.Lock()
     def _key(self, event_id: str, tenant_id: str) -> str:
         return f"{tenant_id}:{event_id}"
@@ -28,7 +36,10 @@ class InMemoryIdempotencyStore(IdempotencyStore):
         with self._lock:
             if key in self._events:
                 return False
-            self._events.add(key)
+            if len(self._events) >= self.MAX_KEYS:
+                cutoff = time.time() - self.RETENTION_S
+                self._events = {k: t for k, t in self._events.items() if t >= cutoff}
+            self._events[key] = time.time()
             return True
     def has_seen(self, event_id: str, tenant_id: str) -> bool:
         key = self._key(event_id, tenant_id)
@@ -67,16 +78,21 @@ class RedisIdempotencyStore(IdempotencyStore):
     def is_available(self) -> bool:
         return self._available
 
+_in_memory_store = InMemoryIdempotencyStore()
+_redis_stores: Dict[str, "RedisIdempotencyStore"] = {}
+_redis_lock = threading.Lock()
+
+
 def get_idempotency_store() -> IdempotencyStore:
-    env = os.environ.get("NETVRIO_ENV", "test")
-    if env == "test":
-        global _in_memory_store
-        if "_in_memory_store" not in globals():
-            _in_memory_store = InMemoryIdempotencyStore()
+    if is_test_env():
         return _in_memory_store
-    else:
-        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-        store = RedisIdempotencyStore(redis_url)
-        if not store.is_available():
-            raise RuntimeError("Redis required in production but unavailable")
-        return store
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    # Reuse one client per URL instead of reconnecting (and pinging) on every webhook.
+    with _redis_lock:
+        store = _redis_stores.get(redis_url)
+        if store is None or not store.is_available():
+            store = RedisIdempotencyStore(redis_url)
+            _redis_stores[redis_url] = store
+    if not store.is_available():
+        raise RuntimeError("Redis required outside test mode but unavailable")
+    return store

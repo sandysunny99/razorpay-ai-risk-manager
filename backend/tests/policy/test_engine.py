@@ -59,3 +59,27 @@ def test_policy_engine_risk_thresholds():
     )
     result = engine.evaluate(assessment_review, policy, get_base_security())
     assert result.decision == ActionDecision.REVIEW
+
+
+def test_zombie_step_up_never_downgrades_a_risk_block():
+    """Regression: a zombie REVIEW used to return early and turn a high-risk BLOCK into REVIEW."""
+    engine = PolicyEngine()
+    policy = MerchantPolicy(merchant_id="m1", auto_block_threshold=90.0, auto_review_threshold=50.0,
+                            require_step_up_for_zombie=True)
+    assessment = RiskAssessment(risk_level="HIGH", risk_score=95.0, confidence=1.0, risk_factors=[],
+                                evidence_ids=["e1"], correlation_id="c1", timestamp=1)
+    result = engine.evaluate(assessment, policy, get_base_security(), zombie_remediation=ActionDecision.REVIEW)
+    assert result.decision == ActionDecision.BLOCK
+    assert "RISK_SCORE_EXCEEDS_BLOCK_THRESHOLD" in result.reason_codes
+    assert "ZOMBIE_CARD_REVIEW_REQUIRED" in result.reason_codes
+
+
+def test_zombie_step_up_escalates_low_risk_to_review():
+    engine = PolicyEngine()
+    policy = MerchantPolicy(merchant_id="m1", auto_block_threshold=90.0, auto_review_threshold=50.0,
+                            require_step_up_for_zombie=True)
+    assessment = RiskAssessment(risk_level="LOW", risk_score=0.0, confidence=1.0, risk_factors=[],
+                                evidence_ids=["e1"], correlation_id="c1", timestamp=1)
+    result = engine.evaluate(assessment, policy, get_base_security(), zombie_remediation=ActionDecision.REVIEW)
+    assert result.decision == ActionDecision.REVIEW
+    assert result.policy_id == "zombie_pol_v1"

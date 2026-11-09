@@ -1,7 +1,6 @@
 """Real-time endpoints: Server-Sent Events feed, snapshot and live traffic generator controls."""
 import asyncio
 import json
-import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -11,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.api.dependencies import get_tenant_auth_provider
 from backend.realtime.bus import event_bus
 from backend.realtime.generator import get_generator
+from backend.runtime_env import demo_mode_enabled
 
 router = APIRouter()
 
@@ -32,8 +32,7 @@ def get_stream_tenant(request: Request, tenant: Optional[str] = Query(default=No
 
 
 def require_demo_mode() -> None:
-    env = os.getenv("NETVRIO_ENV", "development").lower()
-    if env == "production" or os.getenv("NETVRIO_DEMO_MODE", "false").lower() != "true":
+    if not demo_mode_enabled():
         raise HTTPException(status_code=404, detail="Not Found")
 
 
@@ -68,7 +67,7 @@ async def stream_events(request: Request, tenant_id: str = Depends(get_stream_te
 
 @router.get("/snapshot")
 def snapshot(limit: int = Query(default=200, ge=1, le=500), tenant_id: str = Depends(get_stream_tenant)):
-    gen = get_generator(tenant_id).status() if os.getenv("NETVRIO_DEMO_MODE", "false").lower() == "true" else None
+    gen = get_generator(tenant_id).status() if demo_mode_enabled() else None
     return {
         "events": event_bus.recent(tenant_id, limit),
         "subscribers": event_bus.subscriber_count(tenant_id),

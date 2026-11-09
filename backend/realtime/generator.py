@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 import hashlib
 import hmac
 import json
+import os
 import random
 import time
 from typing import Callable, Dict, List, Optional, Tuple
@@ -28,6 +29,36 @@ _ACTIVE_TOKENS = [f"tok_live_{i:04d}" for i in range(1, 201)]
 _EXPIRED_TOKENS = [f"tok_expired_{i:03d}" for i in range(1, 9)]  # small pool => reuse accumulates
 _METHODS = ["card", "card", "card", "upi", "upi", "netbanking", "wallet"]
 _CHANNELS = ["web", "android", "ios", "pos"]
+
+# Customer IPs come from RFC 6598 shared address space (not anyone's real address); hostile IPs
+# come from the RFC 5737 ranges listed in the synthetic threat feed.
+_THREAT_NETS = [("192.0.2", 0, 127), ("198.51.100", 0, 255), ("203.0.113", 128, 255)]
+
+def _luhn_check_digit(body: str) -> str:
+    total = 0
+    for i, ch in enumerate(reversed(body)):
+        d = int(ch)
+        if i % 2 == 0:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return str((10 - total % 10) % 10)
+
+
+def synthetic_pan(token: str) -> str:
+    """Deterministic, Luhn-valid number in the non-issuable 999990 range, one per synthetic token.
+    Only used to derive fingerprints for the exposure-monitoring drill; never sent in payloads."""
+    body = "999990" + str(int(hashlib.sha256(token.encode()).hexdigest(), 16))[-9:]
+    return body + _luhn_check_digit(body)
+
+
+def synthetic_fingerprint(token: str) -> Optional[str]:
+    secret_hex = os.getenv("FINGERPRINT_HMAC_SECRET")
+    if not secret_hex:
+        return None
+    return "fp_" + hmac.new(bytes.fromhex(secret_hex), synthetic_pan(token).encode(), hashlib.sha256).hexdigest()[:16]
+
 
 ATTACKS = ("forged_signature", "replay_stale", "duplicate_delivery", "cross_tenant", "raw_pan")
 
@@ -78,6 +109,7 @@ class TrafficGenerator:
             "event_type": "payment.authorized",
             "data": {
                 "currency": "INR",
+                "ip_address": self._customer_ip(),
                 "method": self._rng.choice(_METHODS),
                 "channel": self._rng.choice(_CHANNELS),
                 **data,
@@ -85,7 +117,18 @@ class TrafficGenerator:
         }
         if token:
             payload["token"] = token
+            if payload["data"].get("method") == "card":
+                fp = synthetic_fingerprint(token)
+                if fp:
+                    payload["fingerprint"] = fp
         return payload
+
+    def _customer_ip(self) -> str:
+        return f"100.{self._rng.randint(64, 127)}.{self._rng.randint(0, 255)}.{self._rng.randint(1, 254)}"
+
+    def _threat_ip(self) -> str:
+        prefix, lo, hi = self._rng.choice(_THREAT_NETS)
+        return f"{prefix}.{self._rng.randint(max(lo, 1), min(hi, 254))}"
 
     def _legit(self) -> Tuple[str, dict]:
         r = self._rng.random()
@@ -96,9 +139,13 @@ class TrafficGenerator:
                 {"amount": amount, "customer_id": self._rng.choice(_CUSTOMERS)}, self._rng.choice(_ACTIVE_TOKENS)
             )
         kind = self._rng.choices(
-            ["high_value", "very_high_value", "velocity_burst", "zombie_reuse", "compromised_token"],
-            weights=[30, 12, 25, 25, 8],
+            ["high_value", "very_high_value", "velocity_burst", "zombie_reuse", "compromised_token", "threat_ip"],
+            weights=[26, 10, 22, 22, 6, 14],
         )[0]
+        if kind == "threat_ip":
+            data = {"amount": round(self._rng.uniform(300, 9000), 2), "customer_id": self._rng.choice(_CUSTOMERS),
+                    "ip_address": self._threat_ip()}
+            return kind, self._base(data, self._rng.choice(_ACTIVE_TOKENS))
         if kind == "high_value":
             data = {"amount": round(self._rng.uniform(10500, 60000), 2), "customer_id": self._rng.choice(_CUSTOMERS)}
             return kind, self._base(data, self._rng.choice(_ACTIVE_TOKENS))

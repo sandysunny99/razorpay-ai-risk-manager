@@ -91,9 +91,9 @@ def test_observed_velocity_raises_risk_without_caller_hint():
 def test_dead_token_reuse_is_counted_from_traffic():
     tenant = _tenant()
     first = _post(tenant, {"amount": 100, "card_lifecycle": "EXPIRED"}, token="tok_dead_1")
-    assert first["zombie_signal"] is None
+    assert first["zombie_signal"]["recommendation"] == "REQUIRE_STEP_UP"  # dead credential presented
     second = _post(tenant, {"amount": 100, "card_lifecycle": "EXPIRED"}, token="tok_dead_1")
-    assert second["zombie_signal"] is not None
+    assert second["decision"] == "REVIEW"
 
 
 def test_snapshot_is_tenant_scoped_and_accepts_query_tenant():
@@ -168,10 +168,12 @@ def test_razorpay_webhook_flows_through_pipeline_without_pii(monkeypatch):
     dumped = json.dumps(ev)
     assert "buyer@example.com" not in dumped and "+919999999999" not in dumped and "1111" not in dumped
 
-    # Razorpay retries reuse the event id, so the replay/idempotency controls de-duplicate them.
+    # Razorpay retries reuse the event id: acknowledged as a duplicate (2xx stops the retry loop)
+    # and not processed twice.
     retry = client.post("/integrations/razorpay/webhook", content=body,
                         headers={"x-razorpay-signature": sig, "x-razorpay-event-id": ev["event_id"]})
-    assert retry.status_code == 401
+    assert retry.status_code == 200 and retry.json()["status"] == "duplicate"
+    assert len([e for e in event_bus.recent(tenant, 10) if e.get("source") == "razorpay"]) == 1
 
 
 def test_razorpay_unsupported_event_is_acknowledged(monkeypatch):

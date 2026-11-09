@@ -12,3 +12,16 @@ def evaluate_velocity(velocity: int) -> RiskFactor:
     if velocity > 5:
         return RiskFactor(name="high_velocity", description="More than 5 transactions in 1h", score_impact=30.0)
     return RiskFactor(name="normal_velocity", description="Velocity is normal", score_impact=0.0)
+
+
+def evaluate_threat_intel(matches) -> RiskFactor:
+    """matches: iterable of (category, confidence) from local threat-intel IP lookups."""
+    best = max(matches, key=lambda m: m[1], default=None)
+    if not best:
+        return RiskFactor(name="no_threat_intel", description="No threat-intel match", score_impact=0.0)
+    category, confidence = best
+    return RiskFactor(
+        name=f"threat_intel_{category}",
+        description=f"Source IP listed as {category.replace('_', ' ')} (confidence {confidence:.2f})",
+        score_impact=round(60.0 * float(confidence), 1),
+    )
