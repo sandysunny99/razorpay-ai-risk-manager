@@ -209,28 +209,115 @@ class ZombieCardSaverService:
         )
 
     async def execute_token_remediation(self, db: Session, token_id: str, action: ZombieActionType, reason: str = "Zombie Card Saver Selective Remediation") -> Dict[str, Any]:
+        # Retrieve token and its card
         token = db.query(PaymentToken).filter(PaymentToken.token_id == token_id).first()
         if not token:
             return {"success": False, "error": f"Token {token_id} not found."}
 
-        # Safe gateway action
-        gateway_res = await razorpay_test_adapter.revoke_payment_token(token_id, reason=reason)
-        token.status = "REVOKED"
-        db.commit()
+        # Retrieve the associated card for risk scoring
+        card = db.query(Card).filter(Card.card_id == token.card_id).first()
+        if not card:
+            return {"success": False, "error": f"Card for token {token_id} not found."}
 
-        # Audit ledger record
+        # Compute authoritative risk score (same logic as get_card_analysis)
+        matches = self.threat_provider._db.get(card.card_fingerprint, [])
+        exposure_present = len(matches) > 0
+        max_exposure_conf = max([m.confidence for m in matches], default=0.0)
+        card_risk_data = self.card_risk_engine.evaluate(card)
+        exposure_score = 85.0 * max_exposure_conf if exposure_present else 0.0
+        risk_score = min(100.0, card_risk_data["score"] * 0.5 + exposure_score * 0.5)
+
+        # Map action enum to policy engine identifier
+        action_name = action.value.lower() if action == ZombieActionType.REVOKE_TOKEN else action.value
+
+        # Evaluate policy
+        from app.engines.policy_engine import PolicyEngine
+        try:
+            policy_result = PolicyEngine().evaluate_action(
+                action_name=action_name,
+                risk_score=risk_score,
+                context={"is_zombie": True},
+            )
+        except Exception:
+            # Exception path – audit and generic safe response
+            audit_entry = AuditLedgerEngine.append_event(
+                db=db,
+                event_id=f"EVT-ZOMBIE-{uuid.uuid4().hex[:12].upper()}",
+                actor="ZOMBIE_CARD_SAVER_AGENT",
+                decision="EXCEPTION",
+                risk_score=risk_score,
+                policy="UNKNOWN",
+                tool="execute_token_remediation",
+                action_requested=action.value,
+                action_executed="NONE",
+                verification="EXCEPTION",
+                details={"token_id": token_id, "reason": reason},
+            )
+            return {
+                "success": False,
+                "error": "Token remediation failed due to policy evaluation error.",
+                "audit_block_hash": audit_entry.current_hash,
+            }
+
+        # DENY path – no gateway call, audit entry recorded
+        if not policy_result.get("allowed", False):
+            audit_entry = AuditLedgerEngine.append_event(
+                db=db,
+                event_id=f"EVT-ZOMBIE-{uuid.uuid4().hex[:12].upper()}",
+                actor="ZOMBIE_CARD_SAVER_AGENT",
+                decision=policy_result.get("decision", "DENIED"),
+                risk_score=risk_score,
+                policy=policy_result.get("policy_version", "UNKNOWN"),
+                tool="execute_token_remediation",
+                action_requested=action.value,
+                action_executed="NONE",
+                verification=policy_result.get("decision", "DENIED"),
+                details={"token_id": token_id, "reason": reason},
+            )
+            return {
+                "success": False,
+                "error": "Policy denied token remediation.",
+                "audit_block_hash": audit_entry.current_hash,
+            }
+
+        # ALLOW path – perform gateway revocation
+        try:
+            gateway_res = await razorpay_test_adapter.revoke_payment_token(token_id, reason=reason)
+            token.status = "REVOKED"
+            db.commit()
+        except Exception as exc:
+            # Gateway failure – audit exception and return safe error
+            audit_entry = AuditLedgerEngine.append_event(
+                db=db,
+                event_id=f"EVT-ZOMBIE-{uuid.uuid4().hex[:12].upper()}",
+                actor="ZOMBIE_CARD_SAVER_AGENT",
+                decision="EXCEPTION",
+                risk_score=risk_score,
+                policy=policy_result.get("policy_version", "UNKNOWN"),
+                tool="execute_token_remediation",
+                action_requested=action.value,
+                action_executed="NONE",
+                verification="EXCEPTION",
+                details={"token_id": token_id, "reason": reason, "gateway_error_type": type(exc).__name__},
+            )
+            return {
+                "success": False,
+                "error": "Token remediation failed due to gateway error.",
+                "audit_block_hash": audit_entry.current_hash,
+            }
+
         audit_entry = AuditLedgerEngine.append_event(
             db=db,
             event_id=f"EVT-ZOMBIE-{uuid.uuid4().hex[:12].upper()}",
             actor="ZOMBIE_CARD_SAVER_AGENT",
-            decision="REVOKE",
-            risk_score=86.0,
-            policy="TIER_5_AUTO_EXECUTE",
-            tool="execute_revoke_token",
+            decision=policy_result.get("decision", "REVOKE"),
+            risk_score=risk_score,
+            policy=policy_result.get("policy_version", "UNKNOWN"),
+            tool="execute_token_remediation",
             action_requested=action.value,
-            action_executed="REVOKED",
+            action_executed=policy_result.get("action", action.value),
             verification="VERIFIED",
-            details={"token_id": token_id, "gateway_ref": gateway_res.get("gateway_reference")}
+            details={"token_id": token_id, "gateway_ref": gateway_res.get("gateway_reference")},
         )
 
         return {
@@ -239,7 +326,7 @@ class ZombieCardSaverService:
             "action_executed": action.value,
             "new_status": "REVOKED",
             "audit_block_hash": audit_entry.current_hash,
-            "message": f"Token {token_id} selectively revoked. Dependent recurring tokens preserved."
+            "message": f"Token {token_id} selectively revoked. Dependent recurring tokens preserved.",
         }
 
 zombie_card_saver_service = ZombieCardSaverService()

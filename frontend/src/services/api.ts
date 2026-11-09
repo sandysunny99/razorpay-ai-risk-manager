@@ -1,219 +1,127 @@
+import axios from 'axios';
 import {
-  OverviewMetrics,
-  InvestigationResponse,
-  CardItem,
-  TokenItem,
-  ZombieTokenAlert,
-  SecurityCase,
-  AuditEvent,
-  ScenarioItem,
-} from '../types';
+  AuditList,
+  AuditRecord,
+  AuditRecordResponse,
+  AuditStats,
+  GeneratorStatus,
+  LiveSnapshot,
+  ProviderHealth,
+  RazorpayStatus,
+  SystemHealth,
+  TransactionResponse,
+} from '../types/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+// Dev server talks to the local API; a production build is served by the API itself (same origin).
+export const API_BASE_URL: string =
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : '');
 
-type ErrorListener = (errorMsg: string) => void;
-let errorListener: ErrorListener | null = null;
+/** DEMO TENANT CONTEXT — production authentication is not connected in this prototype. */
+export const DEMO_TENANT = 'tenant_123';
 
-export const setApiErrorListener = (listener: ErrorListener | null) => {
-  errorListener = listener;
-};
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 15000,
+  headers: { 'x-tenant-id': DEMO_TENANT },
+});
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  try {
-    const res = await fetch(url, options);
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      let detail = res.statusText || 'API request failed';
-      try {
-        const parsed = JSON.parse(errText);
-        detail = parsed.detail || parsed.message || detail;
-      } catch {
-        if (errText) detail = errText;
-      }
-      const message = `${detail} (${res.status})`;
-      if (errorListener) errorListener(message);
-      throw new Error(message);
-    }
-    return res.json();
-  } catch (err: any) {
-    if (errorListener && !err.message?.includes('(')) {
-      errorListener(err.message || 'Network connection failed');
-    }
-    throw err;
-  }
+export interface WebhookDemoData {
+  amount: number;
+  currency: string;
+  ip_address?: string;
+  user_input?: string;
+  note?: string;
+  card_lifecycle?: 'ACTIVE' | 'EXPIRED' | 'REPLACED';
+  recent_reuse_count?: number;
+  trusted_compromise_assertion?: boolean;
+  velocity_1h?: number;
 }
 
-export const api = {
-  async getOverview(): Promise<OverviewMetrics> {
-    return fetchJson<OverviewMetrics>(`${API_BASE}/risk/overview`);
-  },
+export interface WebhookDemoPayload {
+  event_id: string;
+  merchant_id: string;
+  timestamp: number;
+  event_type: string;
+  data: WebhookDemoData;
+  token?: string;
+}
 
-  async triggerInvestigation(txnId?: string): Promise<InvestigationResponse> {
-    return fetchJson<InvestigationResponse>(`${API_BASE}/risk/investigate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transaction_id: txnId }),
+export interface DemoRunOptions {
+  /** Replace the server signature with a forged one. */
+  badHmac?: boolean;
+  /** Send the request under a different tenant header than the signed merchant_id. */
+  badTenant?: boolean;
+  /** Deliver the identical signed request twice (webhook retry / replay). Returns the 2nd result. */
+  deliverTwice?: boolean;
+}
+
+interface DemoSignResponse {
+  signature: string;
+  payload: unknown;
+  signed_body?: string;
+}
+
+/**
+ * Signs a payload with the backend demo signer, then posts it to the protected webhook.
+ * The exact signed bytes are sent verbatim — re-serializing in JS would alter floats and break HMAC.
+ */
+export const processWebhookDemo = async (
+  payload: WebhookDemoPayload,
+  options: DemoRunOptions = {},
+): Promise<TransactionResponse> => {
+  const signRes = await api.post<DemoSignResponse>('/webhooks/demo/sign', payload);
+  const body = signRes.data.signed_body ?? JSON.stringify(signRes.data.payload);
+  const signature = options.badHmac ? 'forged_signature_0000' : signRes.data.signature;
+
+  const send = () =>
+    api.post<TransactionResponse>('/webhooks/payment', body, {
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': signature,
+        'x-tenant-id': options.badTenant ? 'tenant_attacker_999' : DEMO_TENANT,
+      },
+      transformRequest: [(data) => data],
     });
-  },
 
-  async triggerGoldenDemo(): Promise<InvestigationResponse> {
-    return fetchJson<InvestigationResponse>(`${API_BASE}/demo/trigger-golden-scenario`, {
-      method: 'POST',
-    });
-  },
-
-  async triggerHighRiskDemo(): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/demo/trigger-high-risk-transaction`, {
-      method: 'POST',
-    });
-  },
-
-  async triggerStepUpDemo(): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/demo/trigger-step-up-challenge`, {
-      method: 'POST',
-    });
-  },
-
-  async triggerCardExposureDemo(): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/demo/trigger-card-exposure`, {
-      method: 'POST',
-    });
-  },
-
-  async triggerPolicyDenialDemo(): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/demo/trigger-policy-denial-scenario`, {
-      method: 'POST',
-    });
-  },
-
-  async triggerPromptInjectionDemo(): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/demo/trigger-prompt-injection-scenario`, {
-      method: 'POST',
-    });
-  },
-
-  async verifyAuditChain(): Promise<{
-    valid: boolean;
-    total_events: number;
-    status: string;
-    tampered_events: any[];
-    head_hash?: string;
-  }> {
-    return fetchJson(`${API_BASE}/audit/verify`);
-  },
-
-  async getScenarios(): Promise<ScenarioItem[]> {
-    return fetchJson<ScenarioItem[]>(`${API_BASE}/demo/scenarios`);
-  },
-
-  async resetData(): Promise<{ status: string; message: string }> {
-    return fetchJson<{ status: string; message: string }>(`${API_BASE}/demo/reset-data`, {
-      method: 'POST',
-    });
-  },
-
-  async getCards(): Promise<CardItem[]> {
-    return fetchJson<CardItem[]>(`${API_BASE}/cards`);
-  },
-
-  async getTokens(): Promise<TokenItem[]> {
-    return fetchJson<TokenItem[]>(`${API_BASE}/tokens`);
-  },
-
-  async getZombieTokens(): Promise<ZombieTokenAlert[]> {
-    return fetchJson<ZombieTokenAlert[]>(`${API_BASE}/tokens/zombies`);
-  },
-
-  async revokeToken(tokenId: string): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/tokens/${tokenId}/revoke`, {
-      method: 'POST',
-    });
-  },
-
-  async getCases(): Promise<SecurityCase[]> {
-    return fetchJson<SecurityCase[]>(`${API_BASE}/cases`);
-  },
-
-  async getAuditEvents(limit: number = 50, offset: number = 0): Promise<AuditEvent[]> {
-    return fetchJson<AuditEvent[]>(`${API_BASE}/audit/events?limit=${limit}&offset=${offset}`);
-  },
-
-  async getEvaluationMetrics(split: string = 'test.jsonl', threshold: number = 75.0): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/evaluation/metrics?split=${split}&threshold=${threshold}`);
-  },
-
-  async getAblationStudy(split: string = 'test.jsonl'): Promise<any[]> {
-    return fetchJson<any[]>(`${API_BASE}/evaluation/ablation?split=${split}`);
-  },
-
-  async getThresholdSweep(split: string = 'test.jsonl'): Promise<any[]> {
-    return fetchJson<any[]>(`${API_BASE}/evaluation/thresholds?split=${split}`);
-  },
-
-  async getEvaluationTransactions(split: string = 'test.jsonl', limit: number = 50): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/evaluation/transactions?split=${split}&limit=${limit}`);
-  },
-
-  async getErrorAnalysis(split: string = 'test.jsonl', threshold: number = 75.0): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/evaluation/errors?split=${split}&threshold=${threshold}`);
-  },
-
-  async getPolicyTiers(split: string = 'validation.jsonl'): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/evaluation/tiers?split=${split}`);
-  },
-
-  async requestStepUp(transactionId: string): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/risk/step-up/request?transaction_id=${transactionId}`, {
-      method: 'POST',
-    });
-  },
-
-  async verifyStepUp(challengeId: string, transactionId: string, success: boolean = true): Promise<any> {
-    return fetchJson<any>(
-      `${API_BASE}/risk/step-up/verify?challenge_id=${challengeId}&transaction_id=${transactionId}&success=${success}`,
-      { method: 'POST' }
-    );
-  },
-
-  async getSecurityEvents(): Promise<any[]> {
-    return fetchJson<any[]>(`${API_BASE}/security/cloudflare/events`);
-  },
-
-  async getDataProtectionStatus(): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/security/data-protection`);
-  },
-
-  async testDLP(inputText: string): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/security/dlp/test`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input_text: inputText }),
-    });
-  },
-
-  async getExposureEvents(): Promise<any[]> {
-    return fetchJson<any[]>(`${API_BASE}/exposure/events`);
-  },
-
-  async getExposureStatistics(): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/exposure/statistics`);
-  },
-
-  async getZombieCards(): Promise<any[]> {
-    return fetchJson<any[]>(`${API_BASE}/zombie-cards`);
-  },
-
-  async getZombieStatistics(): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/zombie-cards/statistics`);
-  },
-
-  async getZombieCardAnalysis(cardId: string): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/zombie-cards/${cardId}/analysis`);
-  },
-
-  async revokeZombieToken(tokenId: string): Promise<any> {
-    return fetchJson<any>(`${API_BASE}/zombie-cards/tokens/${tokenId}/revoke`, {
-      method: 'POST',
-    });
-  },
+  if (options.deliverTwice) {
+    await send();
+  }
+  const res = await send();
+  return res.data;
 };
+
+export const getHealth = async (): Promise<SystemHealth> => (await api.get('/health')).data;
+
+export const getProviderHealth = async (): Promise<ProviderHealth> => (await api.get('/health/providers')).data;
+
+export const getAudit = async (auditId: string): Promise<AuditRecord> =>
+  (await api.get(`/audit/${encodeURIComponent(auditId)}`)).data;
+
+export const getAuditRecord = async (auditId: string): Promise<AuditRecordResponse> => getAudit(auditId);
+
+export const listAuditRecords = async (limit = 25): Promise<AuditList> =>
+  (await api.get('/audit', { params: { limit } })).data;
+
+export const getAuditStats = async (): Promise<AuditStats> => (await api.get('/audit/summary')).data;
+
+// ── Real-time ────────────────────────────────────────────────────────────────────────────
+
+/** EventSource cannot send headers, so the demo tenant travels as a query parameter. */
+export const liveStreamUrl = (tenant = DEMO_TENANT): string =>
+  `${API_BASE_URL}/live/events?tenant=${encodeURIComponent(tenant)}`;
+
+export const getLiveSnapshot = async (limit = 300): Promise<LiveSnapshot> =>
+  (await api.get('/live/snapshot', { params: { limit } })).data;
+
+export interface GeneratorUpdate {
+  running?: boolean;
+  rate_per_sec?: number;
+  attack_ratio?: number;
+  risky_ratio?: number;
+}
+
+export const updateGenerator = async (update: GeneratorUpdate): Promise<GeneratorStatus> =>
+  (await api.post('/live/generator', update)).data;
+
+export const getRazorpayStatus = async (): Promise<RazorpayStatus> =>
+  (await api.get('/integrations/razorpay/status')).data;

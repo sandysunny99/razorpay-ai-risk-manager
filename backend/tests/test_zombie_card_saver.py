@@ -1,3 +1,6 @@
+import asyncio
+from unittest.mock import AsyncMock, patch
+import uuid
 
 import pytest
 
@@ -119,3 +122,74 @@ async def test_zombie_service_end_to_end_investigation_and_remediation(db):
     assert result["success"] is True
     assert result["new_status"] == "REVOKED"
     assert result["audit_block_hash"] is not None
+
+@pytest.mark.asyncio
+async def test_token_remediation_allow(db, monkeypatch):
+    # Setup card and token
+    unique_id_allow = f"c_allow_{uuid.uuid4().hex[:8]}"
+    card = create_test_card(unique_id_allow, card_fingerprint=f"fp_allow_{uuid.uuid4().hex[:8]}")
+    token = PaymentToken(token_id=f"t_allow_{uuid.uuid4().hex[:8]}", card_id=unique_id_allow, status='ACTIVE', customer_id='cust_001')
+    db.add(card)
+    db.add(token)
+    db.commit()
+
+    # Mock gateway call
+    async def mock_revoke(token_id, reason):
+        return {"gateway_reference": "gw_123"}
+    monkeypatch.setattr('app.integrations.razorpay_adapter.razorpay_test_adapter.revoke_payment_token', AsyncMock(side_effect=mock_revoke))
+
+    # Mock policy to allow
+    mock_policy = {"allowed": True, "decision": "AUTO_EXECUTE", "action": "revoke_token", "policy_version": "v2026.08.2-tiered"}
+    with patch('app.engines.policy_engine.PolicyEngine.evaluate_action', return_value=mock_policy):
+        result = await zombie_card_saver_service.execute_token_remediation(db=db, token_id=token.token_id, action=ZombieActionType.REVOKE_TOKEN, reason='test')
+        assert result["success"] is True
+        assert result["new_status"] == "REVOKED"
+        assert result["audit_block_hash"] is not None
+
+@pytest.mark.asyncio
+async def test_token_remediation_deny(db, monkeypatch):
+    unique_id_deny = f"c_deny_{uuid.uuid4().hex[:8]}"
+    card = create_test_card(unique_id_deny, card_fingerprint=f"fp_deny_{uuid.uuid4().hex[:8]}")
+    token = PaymentToken(token_id=f"t_deny_{uuid.uuid4().hex[:8]}", card_id=unique_id_deny, status='ACTIVE', customer_id='cust_001')
+    db.add(card)
+    db.add(token)
+    db.commit()
+
+    mock_policy = {"allowed": False, "decision": "DENIED", "policy_version": "v2026.08.2-tiered"}
+    with patch('app.engines.policy_engine.PolicyEngine.evaluate_action', return_value=mock_policy):
+        result = await zombie_card_saver_service.execute_token_remediation(db=db, token_id=token.token_id, action=ZombieActionType.REVOKE_TOKEN, reason='test')
+        assert result["success"] is False
+        assert "Policy denied" in result["error"]
+        assert result["audit_block_hash"] is not None
+
+@pytest.mark.asyncio
+async def test_token_remediation_exception(db, monkeypatch):
+    unique_id_exc = f"c_exc_{uuid.uuid4().hex[:8]}"
+    card = create_test_card(unique_id_exc, card_fingerprint=f"fp_exc_{uuid.uuid4().hex[:8]}")
+    token = PaymentToken(token_id=unique_id_exc, card_id=unique_id_exc, status='ACTIVE', customer_id='cust_001')
+    db.add(card)
+    db.add(token)
+    db.commit()
+
+    with patch('app.engines.policy_engine.PolicyEngine.evaluate_action', side_effect=Exception('simulated failure')):
+        result = await zombie_card_saver_service.execute_token_remediation(db=db, token_id=token.token_id, action=ZombieActionType.REVOKE_TOKEN, reason='test')
+        assert result["success"] is False
+        assert "policy evaluation error" in result["error"].lower()
+        assert result["audit_block_hash"] is not None
+
+@pytest.mark.asyncio
+async def test_token_remediation_gateway_failure(db, monkeypatch):
+    unique_id_gw = f"c_gw_{uuid.uuid4().hex[:8]}"
+    card = create_test_card(unique_id_gw, card_fingerprint=f"fp_gw_{uuid.uuid4().hex[:8]}")
+    token = PaymentToken(token_id=unique_id_gw, card_id=unique_id_gw, status='ACTIVE', customer_id='cust_001')
+    db.add(card)
+    db.add(token)
+    db.commit()
+
+    mock_policy = {"allowed": True, "decision": "AUTO_EXECUTE", "action": "revoke_token", "policy_version": "v2026.08.2-tiered"}
+    with patch('app.engines.policy_engine.PolicyEngine.evaluate_action', return_value=mock_policy):
+        with patch('app.integrations.razorpay_adapter.razorpay_test_adapter.revoke_payment_token', AsyncMock(side_effect=Exception('gateway error'))):
+            result = await zombie_card_saver_service.execute_token_remediation(db=db, token_id=token.token_id, action=ZombieActionType.REVOKE_TOKEN, reason='test')
+            assert result["success"] is False
+            assert "gateway error" in result["error"].lower()
+            assert result["audit_block_hash"] is not None

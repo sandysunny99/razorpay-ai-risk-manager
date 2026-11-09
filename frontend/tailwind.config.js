@@ -4,27 +4,15 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
   theme: {
     extend: {
-      colors: {
-        razorpay: {
-          dark: '#0C2340',
-          navy: '#0B192C',
-          blue: '#0D83FF',
-          accent: '#1E40AF',
-          lightBlue: '#E6F0FF',
-          surface: '#1E293B',
-          surfaceLight: '#334155',
-          border: '#334155',
+      keyframes: {
+        'row-in': {
+          '0%': { opacity: '0', transform: 'translateY(-4px)', backgroundColor: 'rgba(99,102,241,0.18)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        risk: {
-          low: '#10B981',
-          medium: '#F59E0B',
-          high: '#F97316',
-          critical: '#EF4444',
-        }
-      }
+      },
+      animation: { 'row-in': 'row-in 600ms ease-out' },
     },
   },
   plugins: [],

@@ -3,26 +3,15 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-[#081220] text-slate-100 font-sans antialiased selection:bg-blue-600 selection:text-white;
+  :root {
+    color-scheme: dark;
   }
-}
-
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0B192C;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  html,
+  body {
+    @apply bg-slate-950 text-slate-200 antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
 }

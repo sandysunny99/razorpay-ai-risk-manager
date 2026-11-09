@@ -32,6 +32,8 @@ ignore = [
 "backend/app/core/security.py" = ["S105"]
 "backend/app/integrations/razorpay_adapter.py" = ["S105", "S107"]
 # Scripts — test credentials, argparse defaults, long diagnostic strings
+# Synthetic traffic generator — random is for simulation, not cryptography
+"backend/realtime/generator.py" = ["S311"]
 "scripts/**" = ["S105", "S107", "S311", "S603", "S607"]
 # Alembic generated migration files — boilerplate imports and style
 "backend/alembic/**" = ["F401", "I001", "W291", "E302"]
