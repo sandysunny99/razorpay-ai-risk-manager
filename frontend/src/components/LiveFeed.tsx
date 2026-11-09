@@ -1,102 +1,95 @@
-import { CreditCard, Radio, Webhook } from 'lucide-react';
+import { KeyboardEvent } from 'react';
 import { LiveEvent } from '../types/api';
-import { formatInr, SCENARIO_LABELS, STAGE_LABELS, verdictOf } from '../utils/liveMetrics';
-import { cx, DecisionBadge, Pill, riskColor } from './ui';
+import { eventLabel, formatInr, STAGE_LABELS, verdictOf } from '../utils/liveMetrics';
+import { cx, DecisionTag, riskColor, Tag } from './ui';
 
-const SOURCE_ICON: Record<string, JSX.Element> = {
-  generator: <Radio className="h-3.5 w-3.5 text-slate-500" aria-label="Synthetic generator" />,
-  razorpay: <CreditCard className="h-3.5 w-3.5 text-sky-400" aria-label="Razorpay" />,
-  api: <Webhook className="h-3.5 w-3.5 text-indigo-300" aria-label="Webhook API" />,
+const SOURCE_LABEL: Record<string, string> = {
+  generator: 'Synthetic',
+  razorpay: 'Razorpay',
+  youpi: 'YouPI UPI',
+  api: 'Webhook API',
 };
 
-export function VerdictBadge({ event }: { event: LiveEvent }) {
-  if (event.outcome === 'REJECTED') {
-    return <Pill tone="bg-violet-500/15 text-violet-300 ring-violet-500/30">Rejected</Pill>;
-  }
-  return <DecisionBadge decision={event.decision} />;
+export function VerdictTag({ event }: { event: LiveEvent }) {
+  if (event.outcome === 'REJECTED') return <Tag outline tone="block">Rejected</Tag>;
+  return <DecisionTag decision={event.decision} />;
+}
+
+export function signalText(e: LiveEvent): { text: string; tone: string } | null {
+  if (e.outcome === 'REJECTED') return { text: STAGE_LABELS[e.rejected_stage ?? 'unknown'] ?? 'Ingress', tone: 'text-block' };
+  if (e.threat?.some((m) => m.category === 'card_exposed')) return { text: 'Card exposed', tone: 'text-zombie' };
+  if (e.zombie) return { text: `Zombie: ${e.zombie.recommendation.replace(/_/g, ' ').toLowerCase()}`, tone: 'text-zombie' };
+  if (e.threat?.length) return { text: `Intel: ${e.threat[0].category.replace(/_/g, ' ')}`, tone: 'text-review' };
+  if (e.risk_factors?.length) return { text: e.risk_factors.join(', ').replace(/_/g, ' '), tone: 'text-ink-muted' };
+  return null;
 }
 
 export default function LiveFeed({
   events,
   onSelect,
   selectedSeq,
+  emptyMessage,
 }: {
   events: LiveEvent[];
   onSelect: (e: LiveEvent) => void;
   selectedSeq?: number;
+  emptyMessage: string;
 }) {
   if (events.length === 0) {
-    return <p className="px-5 py-14 text-center text-sm text-slate-500">Waiting for traffic…</p>;
+    return <p className="px-4 py-12 text-center text-sm text-ink-subtle">{emptyMessage}</p>;
   }
+  const onKey = (e: KeyboardEvent, ev: LiveEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(ev);
+    }
+  };
   return (
-    <div className="max-h-[520px] overflow-auto">
+    <div className="max-h-[560px] overflow-auto">
       <table className="min-w-full text-sm">
-        <thead className="sticky top-0 z-10 bg-slate-900">
-          <tr className="border-b border-slate-800 text-left text-[11px] uppercase tracking-wider text-slate-500">
-            <th className="px-4 py-2.5 font-medium">Time</th>
-            <th className="px-4 py-2.5 font-medium">Event</th>
-            <th className="px-4 py-2.5 text-right font-medium">Amount</th>
-            <th className="px-4 py-2.5 font-medium">Risk</th>
-            <th className="px-4 py-2.5 font-medium">Signal</th>
-            <th className="px-4 py-2.5 font-medium">Verdict</th>
-            <th className="px-4 py-2.5 text-right font-medium">Latency</th>
+        <thead className="sticky top-0 z-10 bg-surface">
+          <tr className="border-b border-line text-left text-xs text-ink-subtle">
+            <th className="px-4 py-2 font-medium">Verdict</th>
+            <th className="px-4 py-2 font-medium">Why</th>
+            <th className="px-4 py-2 text-right font-medium">Amount</th>
+            <th className="px-4 py-2 text-right font-medium">Risk</th>
+            <th className="px-4 py-2 font-medium">Event</th>
+            <th className="px-4 py-2 font-medium">Time</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60">
+        <tbody>
           {events.map((e) => {
-            const v = verdictOf(e);
+            const sig = signalText(e);
             return (
               <tr
                 key={e.seq}
                 data-testid="live-row"
+                tabIndex={0}
+                aria-label={`${eventLabel(e)}, ${verdictOf(e).toLowerCase()}, open details`}
                 onClick={() => onSelect(e)}
+                onKeyDown={(k) => onKey(k, e)}
                 className={cx(
-                  'animate-row-in cursor-pointer transition-colors hover:bg-slate-800/40',
-                  selectedSeq === e.seq && 'bg-indigo-500/10',
-                  v === 'REJECTED' && 'bg-violet-500/[0.04]',
-                  v === 'BLOCK' && 'bg-rose-500/[0.04]',
+                  'animate-row-in cursor-pointer border-b border-line/60 hover:bg-raised focus-visible:bg-raised',
+                  selectedSeq === e.seq && 'bg-raised',
                 )}
               >
-                <td className="whitespace-nowrap px-4 py-2 font-mono text-[11px] text-slate-500">
-                  {new Date(e.ts).toLocaleTimeString()}
-                </td>
                 <td className="px-4 py-2">
-                  <div className="flex items-center gap-2">
-                    {SOURCE_ICON[e.source] ?? SOURCE_ICON.api}
-                    <span className="truncate text-xs text-slate-200">
-                      {SCENARIO_LABELS[e.scenario ?? ''] ?? e.event_type ?? 'Payment'}
-                    </span>
-                  </div>
+                  <VerdictTag event={e} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-2 text-right font-mono text-xs tabular-nums text-slate-300">
-                  {formatInr(e.amount)}
-                </td>
-                <td className="px-4 py-2">
+                <td className={cx('max-w-[220px] truncate px-4 py-2', sig?.tone ?? 'text-ink-subtle')}>{sig?.text ?? 'No signal'}</td>
+                <td className="whitespace-nowrap px-4 py-2 text-right font-mono tabular-nums text-ink">{formatInr(e.amount)}</td>
+                <td className="px-4 py-2 text-right font-mono tabular-nums">
                   {typeof e.risk_score === 'number' ? (
-                    <span className="font-mono text-xs font-semibold tabular-nums" style={{ color: riskColor(e.risk_score) }}>
-                      {Math.round(e.risk_score)}
-                    </span>
+                    <span style={{ color: riskColor(e.risk_score) }}>{Math.round(e.risk_score)}</span>
                   ) : (
-                    <span className="text-xs text-slate-600">—</span>
+                    <span className="text-ink-subtle">–</span>
                   )}
                 </td>
-                <td className="px-4 py-2 text-xs">
-                  {e.outcome === 'REJECTED' ? (
-                    <span className="text-violet-300">{STAGE_LABELS[e.rejected_stage ?? 'unknown'] ?? e.rejected_stage}</span>
-                  ) : e.zombie ? (
-                    <span className="text-fuchsia-300">Zombie · {e.zombie.recommendation}</span>
-                  ) : e.risk_factors && e.risk_factors.length ? (
-                    <span className="text-amber-300">{e.risk_factors.join(', ')}</span>
-                  ) : (
-                    <span className="text-slate-600">—</span>
-                  )}
+                <td className="whitespace-nowrap px-4 py-2 text-ink-muted">
+                  {eventLabel(e)}
+                  <span className="ml-2 text-xs text-ink-subtle">{SOURCE_LABEL[e.source] ?? e.source}</span>
                 </td>
-                <td className="px-4 py-2">
-                  <VerdictBadge event={e} />
-                </td>
-                <td className="whitespace-nowrap px-4 py-2 text-right font-mono text-[11px] tabular-nums text-slate-500">
-                  {typeof e.latency_ms === 'number' ? `${e.latency_ms.toFixed(1)} ms` : '—'}
-                </td>
+                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-ink-subtle">{new Date(e.ts).toLocaleTimeString()}</td>
               </tr>
             );
           })}

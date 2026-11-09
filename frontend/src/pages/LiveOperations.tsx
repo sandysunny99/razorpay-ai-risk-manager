@@ -1,223 +1,177 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, Ban, CheckCircle2, Gauge, Pause, Play, ShieldAlert, Skull, Timer, Trash2 } from 'lucide-react';
-import { useLiveStream, StreamState } from '../hooks/useLiveStream';
+import { Pause, Play } from 'lucide-react';
+import { useLive } from '../hooks/LiveContext';
+import { StreamState } from '../hooks/useLiveStream';
 import { LiveEvent } from '../types/api';
-import { computeMetrics, formatInr, SCENARIO_LABELS, STAGE_LABELS, verdictOf, Verdict } from '../utils/liveMetrics';
+import { computeMetrics, pendingReviews, resolutionsFrom, trafficEvents, verdictOf, Verdict } from '../utils/liveMetrics';
 import LiveFeed from '../components/LiveFeed';
 import EventDrawer from '../components/EventDrawer';
-import GeneratorPanel from '../components/GeneratorPanel';
+import ReviewQueue from '../components/ReviewQueue';
+import { TrafficToggle } from '../components/TrafficControls';
 import { ControlBars, DecisionTimeline, RiskHistogram, TimelineLegend } from '../components/LiveCharts';
-import { Card, CardHeader, cx, PageHeader, StatCard } from '../components/ui';
+import { cx, PageHeader, Panel, PanelHeader } from '../components/ui';
 
-type Filter = 'ALL' | Verdict | 'ZOMBIE';
+type Filter = 'ALL' | Verdict | 'ZOMBIE' | 'INTEL';
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'ALL', label: 'All' },
-  { id: 'ALLOW', label: 'Allowed' },
-  { id: 'REVIEW', label: 'Review' },
   { id: 'BLOCK', label: 'Blocked' },
-  { id: 'REJECTED', label: 'Attacks' },
-  { id: 'ZOMBIE', label: 'Zombie' },
+  { id: 'REVIEW', label: 'Review' },
+  { id: 'REJECTED', label: 'Rejected at ingress' },
+  { id: 'ZOMBIE', label: 'Zombie cards' },
+  { id: 'INTEL', label: 'Threat intel' },
+  { id: 'ALLOW', label: 'Allowed' },
 ];
 
-function StreamBadge({ state }: { state: StreamState }) {
-  const map = {
-    live: ['bg-emerald-400', 'text-emerald-300', 'Live'],
-    connecting: ['bg-slate-400', 'text-slate-300', 'Connecting'],
-    reconnecting: ['bg-amber-400', 'text-amber-300', 'Reconnecting'],
-    offline: ['bg-rose-500', 'text-rose-300', 'Offline'],
-  } as const;
-  const [dot, text, label] = map[state];
+const STREAM_TEXT: Record<StreamState, { text: string; tone: string }> = {
+  live: { text: 'Stream connected', tone: 'text-allow' },
+  connecting: { text: 'Connecting to stream', tone: 'text-ink-muted' },
+  reconnecting: { text: 'Stream lost, retrying every 3 s', tone: 'text-review' },
+  offline: { text: 'Stream offline. Check that the API is running.', tone: 'text-block' },
+};
+
+function matches(e: LiveEvent, f: Filter): boolean {
+  if (f === 'ALL') return true;
+  if (f === 'ZOMBIE') return Boolean(e.zombie);
+  if (f === 'INTEL') return Boolean(e.threat?.length);
+  return verdictOf(e) === f;
+}
+
+function Figure({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs font-semibold" data-testid="stream-state">
-      <span className="relative flex h-2 w-2">
-        {state === 'live' && <span className={cx('absolute inline-flex h-full w-full animate-ping rounded-full opacity-60', dot)} />}
-        <span className={cx('relative inline-flex h-2 w-2 rounded-full', dot)} />
-      </span>
-      <span className={text}>{label}</span>
-    </span>
+    <div className="min-w-[96px] px-4 py-2">
+      <p className="text-xs text-ink-subtle">{label}</p>
+      <p className={cx('font-mono text-lg tabular-nums', tone ?? 'text-ink')}>{value}</p>
+    </div>
   );
 }
 
-function alertText(e: LiveEvent): { title: string; detail: string; tone: string } {
-  if (e.outcome === 'REJECTED') {
-    return {
-      title: SCENARIO_LABELS[e.scenario ?? ''] ?? 'Attack rejected',
-      detail: `Stopped at ${STAGE_LABELS[e.rejected_stage ?? 'unknown'] ?? e.rejected_stage} (HTTP ${e.http_status})`,
-      tone: 'text-violet-300',
-    };
-  }
-  if (e.zombie) {
-    return { title: `Zombie card · ${e.zombie.severity}`, detail: `${e.zombie.impact} → ${e.zombie.recommendation}`, tone: 'text-fuchsia-300' };
-  }
-  return { title: `Blocked ${formatInr(e.amount)}`, detail: e.risk_factors?.join(', ') || 'Policy block', tone: 'text-rose-300' };
-}
-
 export default function LiveOperations() {
-  const { events, state, paused, setPaused, held, setHeld, buffered, clear, generator, setGenerator } = useLiveStream();
+  const live = useLive();
+  const { events, state, paused, setPaused, held, setHeld, buffered, generator, setGenerator, localResolved, markResolved } = live;
   const [filter, setFilter] = useState<Filter>('ALL');
   const [selected, setSelected] = useState<LiveEvent | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  // Tick so rolling windows (TPS, timeline) advance even when traffic is quiet.
+  // Tick so rolling windows (rate, timeline) advance even when traffic is quiet.
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
+  const traffic = useMemo(() => trafficEvents(events), [events]);
   const metrics = useMemo(() => computeMetrics(events, now), [events, now]);
-  const filtered = useMemo(
-    () =>
-      events.filter((e) => (filter === 'ALL' ? true : filter === 'ZOMBIE' ? Boolean(e.zombie) : verdictOf(e) === filter)).slice(0, 200),
-    [events, filter],
-  );
-  const alerts = useMemo(
-    () => events.filter((e) => e.outcome === 'REJECTED' || e.zombie || verdictOf(e) === 'BLOCK').slice(0, 8),
-    [events],
-  );
+  const resolved = useMemo(() => {
+    const m = resolutionsFrom(events);
+    localResolved.forEach((v, k) => m.set(k, v));
+    return m;
+  }, [events, localResolved]);
+  const queue = useMemo(() => pendingReviews(traffic, resolved).slice(0, 50), [traffic, resolved]);
+  const filtered = useMemo(() => traffic.filter((e) => matches(e, filter)).slice(0, 200), [traffic, filter]);
+  const stream = STREAM_TEXT[state];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
-        title="Live Operations"
-        description="Every payment event streaming through ingress security, deterministic risk, Zombie Card Saver and the policy engine — in real time."
-        action={
-          <div className="flex items-center gap-2">
-            <StreamBadge state={state} />
-            <button
-              onClick={() => setPaused(!paused)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
-            >
-              {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-              {paused ? `Resume${buffered ? ` (${buffered})` : ''}` : 'Pause feed'}
-            </button>
-            <button
-              onClick={clear}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
-              aria-label="Clear feed"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        }
+        title="Live operations"
+        description="Every payment event in real time, from ingress checks to the policy decision. Work the review queue on the left; investigate anything in the stream."
+        action={<TrafficToggle status={generator} onChange={setGenerator} />}
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <StatCard label="Throughput" value={`${metrics.tps}/s`} hint="Last 10 seconds" icon={<Activity className="h-5 w-5" />} accent="text-sky-300" />
-        <StatCard
-          label="Approval rate"
-          value={metrics.approvalRate != null ? `${metrics.approvalRate}%` : '—'}
-          hint={`${metrics.decided} decided`}
-          icon={<CheckCircle2 className="h-5 w-5" />}
-          accent="text-emerald-400"
-        />
-        <StatCard label="Blocked" value={metrics.block} hint={`${formatInr(metrics.volumeStopped, true)} stopped`} icon={<Ban className="h-5 w-5" />} accent="text-rose-400" />
-        <StatCard label="Attacks rejected" value={metrics.rejected} hint="At ingress, pre-analysis" icon={<ShieldAlert className="h-5 w-5" />} accent="text-violet-400" />
-        <StatCard label="Zombie cards" value={metrics.zombies} hint="Dead credential reuse" icon={<Skull className="h-5 w-5" />} accent="text-fuchsia-400" />
-        <StatCard
-          label="Latency p95"
-          value={metrics.p95 != null ? `${metrics.p95.toFixed(1)}ms` : '—'}
-          hint={metrics.p50 != null ? `p50 ${metrics.p50.toFixed(1)}ms` : 'Pipeline time'}
-          icon={<Timer className="h-5 w-5" />}
-          accent="text-amber-300"
-        />
-      </div>
+      <Panel>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5 text-sm">
+          <p className={stream.tone} role="status">
+            {stream.text}
+            {state === 'live' && <span className="text-ink-muted">. {metrics.tps} events/s over the last 10 s.</span>}
+          </p>
+          <button
+            onClick={() => setPaused(!paused)}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-sm text-ink-muted hover:bg-raised hover:text-ink"
+          >
+            {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+            {paused ? `Resume stream${buffered ? ` (${buffered} new)` : ''}` : 'Pause stream'}
+          </button>
+        </div>
+        <div className="flex flex-wrap divide-x divide-line">
+          <Figure label="Waiting for review" value={queue.length} tone={queue.length ? 'text-review' : undefined} />
+          <Figure label="Blocked" value={metrics.block} tone={metrics.block ? 'text-block' : undefined} />
+          <Figure label="Rejected at ingress" value={metrics.rejected} />
+          <Figure label="Zombie cards" value={metrics.zombies} tone={metrics.zombies ? 'text-zombie' : undefined} />
+          <Figure label="Threat-intel hits" value={metrics.threatHits} />
+          <Figure label="Approval rate" value={metrics.approvalRate != null ? `${metrics.approvalRate}%` : '–'} />
+          <Figure label="Pipeline p95" value={metrics.p95 != null ? `${metrics.p95.toFixed(1)} ms` : '–'} />
+        </div>
+      </Panel>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader title="Decisions per 5 s" subtitle="Rolling 3-minute window" action={<TimelineLegend />} />
-          <div className="p-4">
-            <DecisionTimeline data={metrics.timeline} />
-          </div>
-        </Card>
-        <GeneratorPanel status={generator} onChange={setGenerator} />
-      </div>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">
+        <Panel className="xl:col-span-2">
+          <PanelHeader
+            title={`Needs a decision (${queue.length})`}
+            subtitle="Policy sent these to review. Your choice is written to the audit ledger."
+          />
+          <ReviewQueue items={queue} onOpen={setSelected} onResolved={markResolved} />
+        </Panel>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader
-            title="Transaction stream"
+        <Panel className="xl:col-span-3">
+          <PanelHeader
+            title="Event stream"
             subtitle={
               held && buffered
-                ? `Holding while you hover · ${buffered} new`
-                : `${events.length} events · hover to hold, click to investigate`
-            }
-            action={
-              <div className="flex flex-wrap gap-1" role="tablist" aria-label="Filter">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.id}
-                    role="tab"
-                    aria-selected={filter === f.id}
-                    onClick={() => setFilter(f.id)}
-                    className={cx(
-                      'rounded-md px-2 py-1 text-[11px] font-medium',
-                      filter === f.id ? 'bg-indigo-500/20 text-indigo-200' : 'text-slate-400 hover:bg-slate-800',
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
+                ? `Held while your pointer is over the list. ${buffered} new events waiting.`
+                : `${traffic.length} events in this session. Hover holds the list still; Enter opens a row.`
             }
           />
-          <div onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)}>
-            <LiveFeed events={filtered} onSelect={setSelected} selectedSeq={selected?.seq} />
+          <div className="flex flex-wrap gap-1 border-b border-line px-3 py-2" role="tablist" aria-label="Filter stream">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                role="tab"
+                aria-selected={filter === f.id}
+                onClick={() => setFilter(f.id)}
+                className={cx(
+                  'min-h-[36px] cursor-pointer rounded px-2.5 py-1 text-sm',
+                  filter === f.id ? 'bg-raised text-ink' : 'text-ink-subtle hover:text-ink',
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader
-              title={
-                <span className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-400" /> Alerts
-                </span>
+          <div onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)}>
+            <LiveFeed
+              events={filtered}
+              onSelect={setSelected}
+              selectedSeq={selected?.seq}
+              emptyMessage={
+                traffic.length === 0
+                  ? 'No events yet. Start synthetic traffic or send a Razorpay or YouPI test webhook.'
+                  : 'No events match this filter in the current session.'
               }
-              subtitle="Blocks, zombie cards and rejected attacks"
             />
-            {alerts.length === 0 ? (
-              <p className="px-5 py-8 text-center text-xs text-slate-500">All quiet.</p>
-            ) : (
-              <ul className="divide-y divide-slate-800">
-                {alerts.map((e) => {
-                  const a = alertText(e);
-                  return (
-                    <li key={e.seq}>
-                      <button onClick={() => setSelected(e)} className="w-full px-5 py-3 text-left hover:bg-slate-800/40">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={cx('truncate text-sm font-medium', a.tone)}>{a.title}</span>
-                          <span className="shrink-0 font-mono text-[10px] text-slate-500">{new Date(e.ts).toLocaleTimeString()}</span>
-                        </div>
-                        <p className="mt-0.5 truncate text-xs text-slate-400">{a.detail}</p>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Card>
+          </div>
+        </Panel>
+      </div>
 
-          <Card>
-            <CardHeader title="Attacks by control" subtitle="Which ingress control stopped them" />
-            <div className="p-5">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <Panel className="xl:col-span-2">
+          <PanelHeader title="Is hostile traffic rising?" subtitle="Outcomes per 5 seconds, last 3 minutes" action={<TimelineLegend />} />
+          <div className="p-3">
+            <DecisionTimeline data={metrics.timeline} />
+          </div>
+        </Panel>
+        <div className="space-y-5">
+          <Panel>
+            <PanelHeader title="Which control stopped it?" subtitle="Requests rejected before analysis" />
+            <div className="p-4">
               <ControlBars data={metrics.byStage} />
             </div>
-          </Card>
-
-          <Card>
-            <CardHeader
-              title={
-                <span className="flex items-center gap-2">
-                  <Gauge className="h-4 w-4 text-slate-400" /> Risk distribution
-                </span>
-              }
-              subtitle="Deterministic score of decided events"
-            />
-            <div className="p-4">
+          </Panel>
+          <Panel>
+            <PanelHeader title="How risky is accepted traffic?" subtitle="Deterministic score of decided events" />
+            <div className="p-3">
               <RiskHistogram data={metrics.riskHistogram} />
             </div>
-          </Card>
+          </Panel>
         </div>
       </div>
 

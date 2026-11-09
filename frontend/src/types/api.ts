@@ -75,6 +75,7 @@ export interface AuditSummaryItem {
   zombie_detected?: boolean;
   reason_codes?: string[];
   record_hash?: string;
+  resolution?: { action: 'APPROVE' | 'DECLINE'; timestamp: number } | null;
 }
 
 export interface AuditRecord extends AuditSummaryItem {
@@ -103,7 +104,7 @@ export interface LiveEvent {
   tenant_id: string;
   source: 'generator' | 'api' | 'razorpay' | string;
   scenario?: string;
-  outcome: 'DECIDED' | 'REJECTED';
+  outcome: 'DECIDED' | 'REJECTED' | 'RESOLVED' | 'EXPOSURE';
   event_id?: string | null;
   correlation_id?: string;
   amount?: number | null;
@@ -118,6 +119,13 @@ export interface LiveEvent {
   zombie?: ZombieSignal | null;
   ai_provider?: string;
   audit_id?: string;
+  threat?: ThreatMatch[];
+  // RESOLVED (analyst outcome for a REVIEW decision)
+  resolves?: string;
+  resolution?: 'APPROVE' | 'DECLINE';
+  // EXPOSURE (card exposure report revoked linked tokens)
+  tokens_revoked?: number;
+  findings?: number;
   // REJECTED
   http_status?: number;
   rejected_stage?: string;
@@ -151,4 +159,61 @@ export interface RazorpayStatus {
   rejected_signature: number;
   ignored: number;
   last_event_at: number | null;
+}
+
+export interface ThreatMatch {
+  indicator_type: 'ip' | 'token' | string;
+  indicator: string;
+  source: string;
+  category: string;
+  confidence: number;
+}
+
+export interface ThreatSource {
+  name: string;
+  category: string;
+  confidence: number;
+  url: string | null;
+  license: string;
+  enabled: boolean;
+  indicators: number;
+  last_refresh: number | null;
+  last_error: string | null;
+}
+
+export interface IntelStatus {
+  live_feeds_enabled: boolean;
+  sources: ThreatSource[];
+  lookups: number;
+  hits: number;
+  learned: { revoked_tokens: number; watched_ips: number };
+}
+
+export interface IntelMatchLog {
+  event_id: string;
+  ts: number;
+  matches: ThreatMatch[];
+}
+
+export interface ExposureSummary {
+  configured: boolean;
+  exposed_fingerprints: number;
+  tokens_revoked_via_exposure: number;
+  reports: { source: string; reported_at: number; findings: number; new: number; tokens_revoked: number }[];
+  recent: { fingerprint: string; source: string; reference: string; observed_at: number; confidence: number }[];
+}
+
+export interface GatewayStatus {
+  configured: boolean;
+  tenant_id: string;
+  webhook_path: string;
+  supported_events: string[];
+  received: number;
+  verified: number;
+  rejected_signature: number;
+  ignored: number;
+  duplicates?: number;
+  last_event_at: number | null;
+  experimental?: boolean;
+  require_v2?: boolean;
 }

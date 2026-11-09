@@ -56,7 +56,7 @@ export function useLiveStream() {
       } catch {
         return;
       }
-      if (pausedRef.current || heldRef.current) {
+      if ((pausedRef.current || heldRef.current) && ev.outcome !== 'RESOLVED') {
         bufferRef.current.push(ev);
         setBuffered(bufferRef.current.length);
       } else {
@@ -110,5 +110,13 @@ export function useLiveStream() {
 
   const clear = useCallback(() => setEvents([]), []);
 
-  return { events, state, paused, setPaused, held, setHeld, buffered, clear, generator, setGenerator };
+  // Resolutions this console made; the server also broadcasts them (RESOLVED events) to everyone.
+  const [localResolved, setLocalResolved] = useState<Map<string, 'APPROVE' | 'DECLINE'>>(() => new Map());
+  const markResolved = useCallback((auditId: string, action: 'APPROVE' | 'DECLINE') => {
+    setLocalResolved((prev) => new Map(prev).set(auditId, action));
+  }, []);
+
+  return {
+    events, state, paused, setPaused, held, setHeld, buffered, clear, generator, setGenerator, localResolved, markResolved,
+  };
 }

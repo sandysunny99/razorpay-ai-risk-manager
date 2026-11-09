@@ -1,28 +1,40 @@
 import { LiveEvent } from '../types/api';
 
+export const EMPTY = '–';
+
 export const STAGE_LABELS: Record<string, string> = {
   hmac: 'HMAC signature',
   schema: 'Strict schema',
   tenant: 'Tenant binding',
   pan: 'Raw PAN guard',
-  replay: 'Replay / duplicate',
+  replay: 'Replay window',
   idempotency: 'Idempotency',
   unknown: 'Other',
 };
 
 export const SCENARIO_LABELS: Record<string, string> = {
-  normal: 'Normal payment',
+  normal: 'Payment',
   high_value: 'High-value payment',
   very_high_value: 'Very high value',
   velocity_burst: 'Velocity burst',
   zombie_reuse: 'Dead token reuse',
   compromised_token: 'Compromised token',
+  threat_ip: 'Listed source IP',
+  'upi.observed_success': 'UPI observed (unreconciled)',
+  'upi.reconciled': 'UPI reconciled',
+  'payment.captured': 'Razorpay captured',
+  'payment.authorized': 'Razorpay authorized',
+  'payment.failed': 'Razorpay failed',
   forged_signature: 'Forged signature',
   replay_stale: 'Stale replay',
   duplicate_delivery: 'Duplicate delivery',
   cross_tenant: 'Cross-tenant injection',
   raw_pan: 'Raw PAN submitted',
 };
+
+export function eventLabel(e: LiveEvent): string {
+  return SCENARIO_LABELS[e.scenario ?? ''] ?? e.event_type ?? 'Payment';
+}
 
 export type Verdict = 'ALLOW' | 'REVIEW' | 'BLOCK' | 'REJECTED';
 
@@ -31,6 +43,23 @@ export function verdictOf(e: LiveEvent): Verdict {
   if (e.decision === 'BLOCK' || e.decision === 'QUARANTINE') return 'BLOCK';
   if (e.decision === 'REVIEW') return 'REVIEW';
   return 'ALLOW';
+}
+
+/** Pipeline outcomes only; resolutions and exposure reports are bookkeeping, not traffic. */
+export function trafficEvents(events: LiveEvent[]): LiveEvent[] {
+  return events.filter((e) => e.outcome === 'DECIDED' || e.outcome === 'REJECTED');
+}
+
+/** audit_id -> resolution, from RESOLVED events seen on the stream. */
+export function resolutionsFrom(events: LiveEvent[]): Map<string, 'APPROVE' | 'DECLINE'> {
+  const map = new Map<string, 'APPROVE' | 'DECLINE'>();
+  for (const e of events) if (e.outcome === 'RESOLVED' && e.resolves && e.resolution) map.set(e.resolves, e.resolution);
+  return map;
+}
+
+/** REVIEW decisions still waiting for a human, newest first. */
+export function pendingReviews(events: LiveEvent[], resolved: Map<string, unknown>): LiveEvent[] {
+  return events.filter((e) => e.outcome === 'DECIDED' && e.decision === 'REVIEW' && e.audit_id && !resolved.has(e.audit_id));
 }
 
 export function percentile(values: number[], p: number): number | null {
@@ -48,6 +77,7 @@ export interface LiveMetrics {
   review: number;
   block: number;
   zombies: number;
+  threatHits: number;
   tps: number;
   approvalRate: number | null;
   p50: number | null;
@@ -60,8 +90,9 @@ export interface LiveMetrics {
 }
 
 /** Derive dashboard metrics from the live event buffer. `now` is injectable for tests. */
-export function computeMetrics(events: LiveEvent[], now: number = Date.now(), windowSec = 180, bucketSec = 5): LiveMetrics {
-  let allow = 0, review = 0, block = 0, rejected = 0, zombies = 0, volumeAllowed = 0, volumeStopped = 0;
+export function computeMetrics(allEvents: LiveEvent[], now: number = Date.now(), windowSec = 180, bucketSec = 5): LiveMetrics {
+  const events = trafficEvents(allEvents);
+  let allow = 0, review = 0, block = 0, rejected = 0, zombies = 0, threatHits = 0, volumeAllowed = 0, volumeStopped = 0;
   const latencies: number[] = [];
   const stageCounts: Record<string, number> = {};
   const hist = new Array(10).fill(0);
@@ -80,10 +111,11 @@ export function computeMetrics(events: LiveEvent[], now: number = Date.now(), wi
     else if (v === 'BLOCK') block++;
     else rejected++;
     if (e.zombie) zombies++;
+    if (e.threat && e.threat.length) threatHits++;
     if (typeof e.latency_ms === 'number') latencies.push(e.latency_ms);
-    if (typeof e.amount === 'number') {
+    if (typeof e.amount === 'number' && v !== 'REJECTED') {
       if (v === 'ALLOW') volumeAllowed += e.amount;
-      else volumeStopped += e.amount;
+      else if (v === 'BLOCK') volumeStopped += e.amount;
     }
     if (v === 'REJECTED') {
       const s = e.rejected_stage ?? 'unknown';
@@ -107,6 +139,7 @@ export function computeMetrics(events: LiveEvent[], now: number = Date.now(), wi
     review,
     block,
     zombies,
+    threatHits,
     tps: Math.round((recent / 10) * 10) / 10,
     approvalRate: decided ? Math.round((allow / decided) * 1000) / 10 : null,
     p50: percentile(latencies, 50),
@@ -122,7 +155,7 @@ export function computeMetrics(events: LiveEvent[], now: number = Date.now(), wi
 }
 
 export function formatInr(amount: number | null | undefined, compact = false): string {
-  if (typeof amount !== 'number') return '—';
+  if (typeof amount !== 'number') return EMPTY;
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',

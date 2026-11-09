@@ -6,7 +6,13 @@ import * as api from '../services/api';
 vi.mock('../services/api', () => ({
   API_BASE_URL: '',
   getProviderHealth: vi.fn(),
+  getHealth: vi.fn(() => Promise.resolve({ status: 'ok' })),
   getRazorpayStatus: vi.fn(() => new Promise(() => undefined)),
+  getYoupiStatus: vi.fn(() => new Promise(() => undefined)),
+  updateGenerator: vi.fn(),
+}));
+vi.mock('../hooks/LiveContext', () => ({
+  useLive: () => ({ generator: null, setGenerator: vi.fn(), state: 'live' }),
 }));
 
 describe('SystemHealth', () => {

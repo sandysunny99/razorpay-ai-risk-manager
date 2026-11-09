@@ -36,7 +36,7 @@ describe('liveMetrics', () => {
     expect(m.rejected).toBe(3);
     expect(m.zombies).toBe(1);
     expect(m.volumeAllowed).toBe(300);
-    expect(m.volumeStopped).toBe(135000);
+    expect(m.volumeStopped).toBe(120000); // BLOCK only; review is not yet stopped
     expect(m.byStage[0]).toMatchObject({ stage: 'hmac', count: 2 });
     expect(m.riskHistogram[0].count).toBe(2);
     expect(m.riskHistogram[9].count).toBe(1);

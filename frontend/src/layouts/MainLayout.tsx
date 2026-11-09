@@ -1,146 +1,183 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { Menu, Plug, Radar, ScrollText, ShieldCheck, X } from 'lucide-react';
-import { DEMO_TENANT, getHealth } from '../services/api';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Activity, Menu, PanelLeftClose, PanelLeftOpen, Plug, ScrollText, Search, ShieldAlert, X } from 'lucide-react';
+import { LiveProvider, useLive } from '../hooks/LiveContext';
+import { DEMO_TENANT } from '../services/api';
+import CommandPalette from '../components/CommandPalette';
 import { cx } from '../components/ui';
+import { pendingReviews, resolutionsFrom, trafficEvents } from '../utils/liveMetrics';
 
 const NAV = [
-  { to: '/', label: 'Live Operations', icon: Radar, end: true },
-  { to: '/ledger', label: 'Audit Ledger', icon: ScrollText, end: false },
+  { to: '/', label: 'Live operations', icon: Activity, end: true },
+  { to: '/threats', label: 'Threat intelligence', icon: ShieldAlert, end: false },
+  { to: '/ledger', label: 'Audit ledger', icon: ScrollText, end: false },
   { to: '/integrations', label: 'Integrations', icon: Plug, end: false },
 ];
 
-type ApiState = 'checking' | 'online' | 'offline';
-
-function useApiState(): ApiState {
-  const [state, setState] = useState<ApiState>('checking');
-  useEffect(() => {
-    let alive = true;
-    const check = () =>
-      getHealth()
-        .then(() => alive && setState('online'))
-        .catch(() => alive && setState('offline'));
-    check();
-    const id = window.setInterval(check, 15000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, []);
-  return state;
+/** Shield mark: a flat monoline outline. No gradient, glow or AI sparkle (anti-slop R-01, R-04). */
+function Mark() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden className="shrink-0">
+      <path d="M12 2.5 4 5.5v6.2c0 4.6 3.3 8.3 8 9.8 4.7-1.5 8-5.2 8-9.8V5.5z" fill="none" stroke="#ecebe7" strokeWidth="1.6" />
+      <path d="M8.5 12.2 11 14.6l4.6-5" fill="none" stroke="#ecebe7" strokeWidth="1.6" />
+    </svg>
+  );
 }
 
-function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const api = useApiState();
+function Sidebar({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const { events, localResolved } = useLive();
+  const traffic = trafficEvents(events);
+  const resolved = resolutionsFrom(events);
+  localResolved.forEach((v, k) => resolved.set(k, v));
+  const waiting = pendingReviews(traffic, resolved).length;
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg shadow-indigo-500/20">
-          <ShieldCheck className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <p className="text-base font-semibold leading-tight text-white">Netvrio</p>
-          <p className="text-[11px] leading-tight text-slate-400">Payment Risk &amp; Security</p>
-        </div>
+      <div className={cx('flex items-center gap-2.5 py-4', collapsed ? 'justify-center px-2' : 'px-4')}>
+        <Mark />
+        {!collapsed && (
+          <div>
+            <p className="text-[15px] font-semibold leading-tight text-ink">Netvrio</p>
+            <p className="text-xs leading-tight text-ink-subtle">Payment risk console</p>
+          </div>
+        )}
       </div>
-
-      <nav className="flex-1 space-y-1 px-3" aria-label="Main">
+      <nav className="flex-1 space-y-0.5 px-2" aria-label="Main">
         {NAV.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             onClick={onNavigate}
+            title={collapsed ? label : undefined}
             className={({ isActive }) =>
               cx(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive ? 'bg-indigo-500/15 text-white ring-1 ring-inset ring-indigo-500/30' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100',
+                'flex min-h-[40px] items-center gap-3 rounded border-l-2 px-3 text-sm',
+                collapsed && 'justify-center px-0',
+                isActive ? 'border-ink bg-raised text-ink' : 'border-transparent text-ink-muted hover:bg-raised hover:text-ink',
               )
             }
           >
-            <Icon className="h-4 w-4" />
-            {label}
+            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            {!collapsed && <span className="flex-1">{label}</span>}
+            {!collapsed && to === '/' && waiting > 0 && (
+              <span className="font-mono text-xs text-review" aria-label={`${waiting} waiting for review`}>{waiting}</span>
+            )}
           </NavLink>
         ))}
       </nav>
+      {!collapsed && (
+        <div className="m-3 border-t border-line pt-3 text-xs text-ink-subtle">
+          <p>
+            Tenant <code className="font-mono text-ink-muted">{DEMO_TENANT}</code>
+          </p>
+          <p className="mt-1">Demo tenant header. Production sign-in is not connected yet.</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
-      <div className="m-3 space-y-2 rounded-lg border border-slate-800 bg-slate-900/80 p-3 text-xs">
-        <div className="flex items-center justify-between">
-          <span className="text-slate-400">API</span>
-          <span className="flex items-center gap-1.5 font-medium">
-            <span
-              className={cx(
-                'h-2 w-2 rounded-full',
-                api === 'online' && 'bg-emerald-400 shadow-[0_0_8px] shadow-emerald-400/60',
-                api === 'offline' && 'bg-rose-500',
-                api === 'checking' && 'bg-slate-500',
-              )}
-            />
-            <span className={api === 'online' ? 'text-emerald-300' : api === 'offline' ? 'text-rose-300' : 'text-slate-400'}>
-              {api === 'online' ? 'Online' : api === 'offline' ? 'Offline' : 'Checking'}
-            </span>
-          </span>
+const TITLES: Record<string, string> = {
+  '/': 'Live operations',
+  '/threats': 'Threat intelligence',
+  '/ledger': 'Audit ledger',
+  '/integrations': 'Integrations',
+};
+
+function Shell() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-canvas text-ink">
+      <aside
+        className={cx(
+          'fixed inset-y-0 left-0 z-30 hidden border-r border-line bg-surface lg:block',
+          collapsed ? 'w-16' : 'w-60',
+        )}
+      >
+        <Sidebar collapsed={collapsed} />
+      </aside>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-64 border-r border-line bg-surface">
+            <button
+              className="absolute right-2 top-3 flex h-11 w-11 items-center justify-center text-ink-muted hover:text-ink"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <Sidebar collapsed={false} onNavigate={() => setMobileOpen(false)} />
+          </aside>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-slate-400">Tenant</span>
-          <code className="rounded bg-slate-800 px-1.5 py-0.5 text-[11px] text-slate-200">{DEMO_TENANT}</code>
+      )}
+
+      <div className={collapsed ? 'lg:pl-16' : 'lg:pl-60'}>
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-canvas px-3 sm:px-5">
+          <button
+            className="flex h-11 w-11 items-center justify-center text-ink-muted hover:text-ink lg:hidden"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <button
+            className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded text-ink-muted hover:bg-raised hover:text-ink lg:flex"
+            onClick={() => setCollapsed((c) => !c)}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+          <nav aria-label="Breadcrumb" className="min-w-0 flex-1 truncate text-sm">
+            <span className="text-ink-subtle">Netvrio</span>
+            <span className="mx-2 text-ink-subtle">/</span>
+            <span className="text-ink">{TITLES[pathname] ?? 'Page'}</span>
+          </nav>
+          <button
+            onClick={() => setPaletteOpen(true)}
+            className="flex h-9 cursor-pointer items-center gap-2 rounded border border-line px-2.5 text-sm text-ink-subtle hover:border-line-strong hover:text-ink"
+            aria-label="Open command palette (Ctrl+K)"
+          >
+            <Search className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Commands</span>
+            <kbd className="hidden font-mono text-xs sm:inline">Ctrl K</kbd>
+          </button>
+        </header>
+        <div className="border-b border-line bg-surface px-3 py-1.5 text-xs text-ink-muted sm:px-5">
+          Prototype on test data: synthetic traffic plus Razorpay test-mode and YouPI webhooks. No real cardholder data. AI output is advisory only.
         </div>
-        <p className="pt-1 text-[11px] leading-snug text-slate-500">Demo tenant context. Production authentication is not connected.</p>
+
+        <main className="mx-auto w-full max-w-[1400px] px-3 py-5 sm:px-5">
+          <Outlet />
+        </main>
       </div>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }
 
 export default function MainLayout() {
-  const [open, setOpen] = useState(false);
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-800 bg-slate-950 lg:block">
-        <Sidebar />
-      </aside>
-
-      {/* Mobile drawer */}
-      {open && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-64 border-r border-slate-800 bg-slate-950">
-            <button
-              className="absolute right-3 top-5 rounded p-1 text-slate-400 hover:text-white"
-              onClick={() => setOpen(false)}
-              aria-label="Close navigation"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <Sidebar onNavigate={() => setOpen(false)} />
-          </aside>
-        </div>
-      )}
-
-      <div className="lg:pl-64">
-        <div className="sticky top-0 z-20 border-b border-amber-500/20 bg-amber-500/10 backdrop-blur">
-          <div className="flex items-center gap-3 px-4 py-2 sm:px-6">
-            <button
-              className="rounded p-1 text-slate-300 hover:text-white lg:hidden"
-              onClick={() => setOpen(true)}
-              aria-label="Open navigation"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">
-              Prototype · test-mode data only
-            </p>
-            <p className="hidden text-xs text-amber-200/70 md:block">
-              Synthetic traffic and Razorpay test-mode webhooks. No real cardholder data. AI output is advisory only.
-            </p>
-          </div>
-        </div>
-
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Outlet />
-        </main>
-      </div>
-    </div>
+    <LiveProvider>
+      <Shell />
+    </LiveProvider>
   );
 }

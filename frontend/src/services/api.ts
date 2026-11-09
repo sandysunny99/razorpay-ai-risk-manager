@@ -4,7 +4,11 @@ import {
   AuditRecord,
   AuditRecordResponse,
   AuditStats,
+  ExposureSummary,
+  GatewayStatus,
   GeneratorStatus,
+  IntelMatchLog,
+  IntelStatus,
   LiveSnapshot,
   ProviderHealth,
   RazorpayStatus,
@@ -123,5 +127,28 @@ export interface GeneratorUpdate {
 export const updateGenerator = async (update: GeneratorUpdate): Promise<GeneratorStatus> =>
   (await api.post('/live/generator', update)).data;
 
+export const getYoupiStatus = async (): Promise<GatewayStatus> => (await api.get('/integrations/youpi/status')).data;
+
+export const getExposureSummary = async (): Promise<ExposureSummary> => (await api.get('/intel/exposures')).data;
+
 export const getRazorpayStatus = async (): Promise<RazorpayStatus> =>
   (await api.get('/integrations/razorpay/status')).data;
+
+// ── Analyst actions, ledger, threat intel ──────────────────────────────────────────────
+
+export const resolveReview = async (
+  auditId: string,
+  action: 'APPROVE' | 'DECLINE',
+): Promise<{ audit_id: string; resolution: string; record_hash: string }> =>
+  (await api.post(`/audit/${encodeURIComponent(auditId)}/resolution`, { action })).data;
+
+export const verifyLedgerFull = async (): Promise<{ chain_verified: boolean; scope: string }> =>
+  (await api.get('/audit/verify')).data;
+
+export const getIntelStatus = async (): Promise<IntelStatus> => (await api.get('/intel/status')).data;
+
+export const getIntelMatches = async (limit = 50): Promise<{ items: IntelMatchLog[] }> =>
+  (await api.get('/intel/matches', { params: { limit } })).data;
+
+export const refreshIntelFeeds = async (): Promise<IntelStatus & { results: Record<string, number> }> =>
+  (await api.post('/intel/refresh')).data;

@@ -1,18 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ShieldCheck } from 'lucide-react';
-import { getAudit, listAuditRecords } from '../services/api';
+import { getAudit, listAuditRecords, verifyLedgerFull } from '../services/api';
 import { AuditRecord, AuditSummaryItem } from '../types/api';
 import { getSafeApiError } from '../utils/errors';
-import { Card, CardHeader, cx, DecisionBadge, formatTime, Notice, PageHeader, RiskLevelBadge, shortId, Spinner } from '../components/ui';
+import PlateButton from '../components/PlateButton';
+import { cx, DecisionTag, formatTime, Notice, PageHeader, Panel, PanelHeader, RiskLevelTag, shortId, Spinner, Tag } from '../components/ui';
 
 export default function AuditViewer() {
   const [auditId, setAuditId] = useState('');
   const [record, setRecord] = useState<AuditRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [looking, setLooking] = useState(false);
-  const [items, setItems] = useState<AuditSummaryItem[]>([]);
+  const [items, setItems] = useState<AuditSummaryItem[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [fullResult, setFullResult] = useState<boolean | null>(null);
 
   const lookup = useCallback(async (id: string) => {
     if (!id.trim()) return;
@@ -38,131 +40,175 @@ export default function AuditViewer() {
     }
   }, [params, lookup]);
 
-  useEffect(() => {
+  const loadList = useCallback(() => {
     listAuditRecords(50)
-      .then((r) => setItems(r.items))
+      .then((r) => {
+        setItems(r.items);
+        setListError(null);
+      })
       .catch((err) => setListError(getSafeApiError(err)));
   }, []);
+  useEffect(loadList, [loadList]);
+
+  const verifyAll = async () => {
+    setVerifying(true);
+    try {
+      setFullResult((await verifyLedgerFull()).chain_verified);
+    } catch (err) {
+      setListError(getSafeApiError(err));
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     lookup(auditId);
   };
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Audit Ledger"
-        description="Tenant-isolated, hash-chained decision records. Lookups for another tenant's records return 404."
-      />
+  const open = (id: string) => {
+    setAuditId(id);
+    lookup(id);
+  };
 
-      <Card>
-        <form onSubmit={onSubmit} className="flex flex-col gap-3 p-4 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        title="Audit ledger"
+        description="Every decision and analyst resolution is appended to a SHA-256 hash chain. Records belong to one tenant; another tenant's IDs return not found."
+        action={
+          <PlateButton variant="quiet" onClick={verifyAll} disabled={verifying}>
+            {verifying && <Spinner className="h-3 w-3" />} Verify the whole chain
+          </PlateButton>
+        }
+      />
+      {fullResult !== null && (
+        <Notice tone={fullResult ? 'info' : 'error'} title={fullResult ? 'Full chain verified' : 'Hash chain broken'}>
+          {fullResult
+            ? 'Every record was re-hashed from the first entry and each link matches.'
+            : 'At least one record no longer matches its hash. Treat the ledger as tampered and investigate.'}
+        </Notice>
+      )}
+
+      <Panel>
+        <form onSubmit={onSubmit} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label htmlFor="audit-id" className="text-sm text-ink">Audit ID</label>
             <input
+              id="audit-id"
               type="text"
               value={auditId}
               onChange={(e) => setAuditId(e.target.value)}
-              placeholder="Enter Audit ID (e.g. aud_tenant_123_evt_...)"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-9 pr-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              placeholder="aud_tenant_123_evt_..."
+              className="mt-1 w-full rounded border border-line-strong bg-canvas px-3 py-2 font-mono text-sm text-ink placeholder:text-ink-subtle focus:border-ink focus:outline-none"
             />
           </div>
-          <button
-            type="submit"
-            disabled={looking}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-60"
-          >
-            {looking && <Spinner />} Lookup
-          </button>
+          <PlateButton type="submit" disabled={looking || !auditId.trim()}>
+            {looking && <Spinner className="h-3 w-3" />} Look up record
+          </PlateButton>
         </form>
-      </Card>
+      </Panel>
 
-      {error && <Notice tone="error">{error}</Notice>}
+      {error && <Notice tone="error" title="Record not available">{error} Check the ID, or that it belongs to this tenant.</Notice>}
 
       {record && (
-        <Card>
-          <CardHeader
-            title="Audit Record"
-            action={
-              record.chain_verified === true ? (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
-                  <ShieldCheck className="h-4 w-4" /> CHAIN VERIFIED
-                </span>
-              ) : (
-                <span className="text-xs font-semibold text-slate-400">UNVERIFIED / DATA UNAVAILABLE</span>
-              )
-            }
+        <Panel>
+          <PanelHeader
+            title="Audit record"
+            action={record.chain_verified ? <Tag tone="allow">Chain verified</Tag> : <Tag tone="block">Chain not verified</Tag>}
           />
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 p-5 text-sm sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              ['Audit ID', <code className="break-all text-slate-200">{record.audit_id}</code>],
-              ['Event ID', <code className="break-all text-slate-200">{record.event_id}</code>],
-              ['Correlation ID', <code className="break-all text-slate-300">{record.correlation_id}</code>],
-              ['Decision', <DecisionBadge decision={record.decision} />],
-              ['Risk', <span className="flex items-center gap-2"><RiskLevelBadge level={record.risk_level} /><span className="font-mono text-slate-300">{record.risk_score ?? '—'}</span></span>],
-              ['Recorded', <span className="text-slate-300">{formatTime(record.timestamp)}</span>],
-              ['Reason codes', <span className="break-all font-mono text-xs text-slate-300">{record.reason_codes?.join(', ') || '—'}</span>],
-              ['Record hash', <code className="break-all text-xs text-slate-400">{record.record_hash ?? '—'}</code>],
-            ].map(([label, value]) => (
-              <div key={label as string}>
-                <dt className="text-xs font-medium text-slate-500">{label}</dt>
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 p-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            {(
+              [
+                ['Audit ID', <code className="break-all font-mono text-ink">{record.audit_id}</code>],
+                ['Event ID', <code className="break-all font-mono text-ink">{record.event_id}</code>],
+                ['Correlation ID', <code className="break-all font-mono text-ink-muted">{record.correlation_id}</code>],
+                ['Decision', <DecisionTag decision={record.decision} />],
+                [
+                  'Risk',
+                  <span className="flex items-center gap-2">
+                    <RiskLevelTag level={record.risk_level} />
+                    <span className="font-mono text-ink-muted">{record.risk_score ?? '–'}</span>
+                  </span>,
+                ],
+                ['Recorded', <span className="font-mono text-ink-muted">{formatTime(record.timestamp)}</span>],
+                [
+                  'Analyst resolution',
+                  record.resolution ? (
+                    <span className="text-ink">
+                      {record.resolution.action === 'APPROVE' ? 'Approved' : 'Declined'}{' '}
+                      <span className="font-mono text-xs text-ink-subtle">{formatTime(record.resolution.timestamp)}</span>
+                    </span>
+                  ) : (
+                    <span className="text-ink-subtle">{record.decision === 'REVIEW' ? 'Waiting for review' : 'Not applicable'}</span>
+                  ),
+                ],
+                ['Reason codes', <span className="break-all font-mono text-xs text-ink-muted">{record.reason_codes?.join(', ') || '–'}</span>],
+                ['Record hash', <code className="break-all font-mono text-xs text-ink-subtle">{record.record_hash ?? '–'}</code>],
+              ] as [string, React.ReactNode][]
+            ).map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs text-ink-subtle">{label}</dt>
                 <dd className="mt-1">{value}</dd>
               </div>
             ))}
           </dl>
-          <div className="border-t border-slate-800 px-5 py-3 text-xs text-amber-200/80">
-            <strong>Data Policy:</strong> Audit API is designed to expose metadata only; sensitive payment fields are not displayed by this UI.
-          </div>
-        </Card>
+          <p className="border-t border-line px-4 py-2.5 text-xs text-ink-subtle">
+            Data policy: the audit API returns metadata only. Amounts and card references are not stored in the ledger.
+          </p>
+        </Panel>
       )}
 
-      <Card>
-        <CardHeader title="Recent records" subtitle="Click a row to inspect it" />
+      <Panel>
+        <PanelHeader title="Recent decisions" subtitle="Newest first. Select a row to inspect it." />
         {listError ? (
-          <div className="p-5">
-            <Notice tone="error">{listError}</Notice>
+          <div className="p-4">
+            <Notice tone="error" title="Could not load the ledger">{listError}</Notice>
           </div>
+        ) : items === null ? (
+          <p className="px-4 py-8 text-sm text-ink-subtle">Loading records.</p>
         ) : items.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-slate-500">No records yet for this tenant.</p>
+          <p className="px-4 py-8 text-sm text-ink-subtle">No decisions recorded for this tenant yet. They appear here once traffic flows.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-left text-[11px] uppercase tracking-wider text-slate-500">
-                  <th className="px-5 py-2.5 font-medium">Audit ID</th>
-                  <th className="px-5 py-2.5 font-medium">Recorded</th>
-                  <th className="px-5 py-2.5 font-medium">Risk</th>
-                  <th className="px-5 py-2.5 font-medium">Decision</th>
-                  <th className="px-5 py-2.5 font-medium">Hash</th>
+                <tr className="border-b border-line text-left text-xs text-ink-subtle">
+                  <th className="px-4 py-2 font-medium">Decision</th>
+                  <th className="px-4 py-2 font-medium">Resolution</th>
+                  <th className="px-4 py-2 font-medium">Risk</th>
+                  <th className="px-4 py-2 font-medium">Audit ID</th>
+                  <th className="px-4 py-2 font-medium">Recorded</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/70">
+              <tbody>
                 {items.map((it) => (
                   <tr
                     key={it.audit_id}
-                    onClick={() => {
-                      setAuditId(it.audit_id);
-                      lookup(it.audit_id);
-                    }}
-                    className={cx('cursor-pointer hover:bg-slate-800/30', record?.audit_id === it.audit_id && 'bg-indigo-500/5')}
+                    tabIndex={0}
+                    onClick={() => open(it.audit_id)}
+                    onKeyDown={(e) => e.key === 'Enter' && open(it.audit_id)}
+                    className={cx(
+                      'cursor-pointer border-b border-line/60 hover:bg-raised focus-visible:bg-raised',
+                      record?.audit_id === it.audit_id && 'bg-raised',
+                    )}
                   >
-                    <td className="whitespace-nowrap px-5 py-3 font-mono text-xs text-slate-300">{shortId(it.audit_id, 14)}</td>
-                    <td className="whitespace-nowrap px-5 py-3 text-xs text-slate-400">{formatTime(it.timestamp)}</td>
-                    <td className="px-5 py-3">
-                      <RiskLevelBadge level={it.risk_level} />
+                    <td className="px-4 py-2"><DecisionTag decision={it.decision} /></td>
+                    <td className="px-4 py-2 text-ink-muted">
+                      {it.resolution
+                        ? it.resolution.action === 'APPROVE' ? 'Approved' : 'Declined'
+                        : it.decision === 'REVIEW' ? <span className="text-review">Waiting</span> : '–'}
                     </td>
-                    <td className="px-5 py-3">
-                      <DecisionBadge decision={it.decision} />
-                    </td>
-                    <td className="px-5 py-3 font-mono text-[11px] text-slate-500">{it.record_hash ? `${it.record_hash.slice(0, 12)}…` : '—'}</td>
+                    <td className="px-4 py-2"><RiskLevelTag level={it.risk_level} /></td>
+                    <td className="px-4 py-2 font-mono text-xs text-ink-muted">{shortId(it.audit_id, 14)}</td>
+                    <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-ink-subtle">{formatTime(it.timestamp)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </Card>
+      </Panel>
     </div>
   );
 }
