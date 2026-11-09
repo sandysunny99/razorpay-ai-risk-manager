@@ -1,75 +1,28 @@
-import React from 'react';
+import { riskColor } from './ui';
 
-interface RiskGaugeProps {
-  score: number;
-  policyDecision?: string;
-  size?: number;
-  showDetails?: boolean;
-}
-
-export const RiskGauge: React.FC<RiskGaugeProps> = ({
-  score,
-  policyDecision,
-  size = 120,
-  showDetails = true,
-}) => {
-  const normalizedScore = Math.max(0, Math.min(100, score));
-  const strokeWidth = 10;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (normalizedScore / 100) * circumference;
-
-  const getColor = (s: number) => {
-    if (s >= 75) return '#EF4444'; // Critical
-    if (s >= 60) return '#F97316'; // High
-    if (s >= 40) return '#EAB308'; // Medium
-    return '#22C55E'; // Low
-  };
-
-  const color = getColor(normalizedScore);
+/** Semi-circular gauge for a 0 to 100 deterministic risk score. */
+export default function RiskGauge({ score, level }: { score: number; level?: string }) {
+  const clamped = Math.max(0, Math.min(100, Number.isFinite(score) ? score : 0));
+  const circumference = Math.PI * 70;
+  const color = riskColor(clamped);
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="transform -rotate-90">
-          {/* Background circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="rgba(255, 255, 255, 0.1)"
-            strokeWidth={strokeWidth}
-            fill="transparent"
-          />
-          {/* Progress circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            fill="transparent"
-            style={{ transition: 'stroke-dashoffset 0.8s ease-out, stroke 0.5s ease' }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold font-mono text-white">
-            {Math.round(normalizedScore)}
-          </span>
-          <span className="text-[10px] text-slate-400 uppercase tracking-wider">/ 100</span>
-        </div>
-      </div>
-      {showDetails && policyDecision && (
-        <span
-          className="mt-2 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide"
-          style={{ backgroundColor: `${color}20`, color }}
-        >
-          {policyDecision}
-        </span>
-      )}
+    <div className="flex flex-col items-center" role="img" aria-label={`Risk score ${clamped} of 100`}>
+      <svg viewBox="0 0 180 100" width="180" height="100" className="w-full max-w-[200px]">
+        <path d="M 20 90 A 70 70 0 0 1 160 90" fill="none" stroke="#2b2f35" strokeWidth="12" />
+        <path
+          d="M 20 90 A 70 70 0 0 1 160 90"
+          fill="none"
+          stroke={color}
+          strokeWidth="12"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - clamped / 100)}
+        />
+        <text x="90" y="80" textAnchor="middle" fill="#ecebe7" fontSize="30" fontWeight="600" fontFamily="IBM Plex Mono, monospace">
+          {Math.round(clamped)}
+        </text>
+      </svg>
+      {level && <span className="mt-1 text-xs text-ink-muted">{level.charAt(0) + level.slice(1).toLowerCase()} risk</span>}
     </div>
   );
-};
+}

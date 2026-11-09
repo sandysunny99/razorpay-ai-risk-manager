@@ -1,32 +1,37 @@
 {
-  "name": "frontend",
+  "name": "netvrio-frontend",
   "private": true,
-  "version": "2.1.0",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.33.0",
-    "react": "^19.2.8",
-    "react-countup": "^6.5.3",
-    "react-dom": "^19.2.8",
-    "tailwind-merge": "^3.6.0"
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "axios": "^1.6.0",
+    "lucide-react": "^0.292.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.18.0",
+    "recharts": "3.10.1"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.4",
-    "autoprefixer": "^10.5.4",
-    "oxlint": "^1.75.0",
-    "postcss": "^8.5.26",
-    "tailwindcss": "^3.4.1",
-    "typescript": "~6.0.2",
-    "vite": "^8.2.0"
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^14.1.0",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "jsdom": "^22.1.0",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vitest": "^0.34.6"
   }
 }

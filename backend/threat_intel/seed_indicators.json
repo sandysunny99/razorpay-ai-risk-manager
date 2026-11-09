@@ -1,0 +1,10 @@
+{
+  "_comment": "Synthetic demo feed. Only IETF documentation ranges (RFC 5737), so no real host or person is listed.",
+  "source": "netvrio-synthetic",
+  "license": "Synthetic, project-owned",
+  "indicators": [
+    {"cidr": "192.0.2.0/25", "category": "carding_proxy", "confidence": 0.8},
+    {"cidr": "198.51.100.0/24", "category": "botnet", "confidence": 0.9},
+    {"cidr": "203.0.113.128/25", "category": "anonymizer", "confidence": 0.6}
+  ]
+}

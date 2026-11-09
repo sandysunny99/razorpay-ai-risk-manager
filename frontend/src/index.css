@@ -3,26 +3,61 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html,
   body {
-    @apply bg-[#081220] text-slate-100 font-sans antialiased selection:bg-blue-600 selection:text-white;
+    @apply bg-canvas font-sans text-ink antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  :focus-visible {
+    outline: 2px solid #ecebe7;
+    outline-offset: 2px;
   }
 }
 
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+@layer components {
+  /* PlateButton: a face sitting on a darker edge that drops when pressed. Chamfered corners echo
+     the "plate" motif; the press depth is the only motion. */
+  .plate {
+    @apply relative inline-flex cursor-pointer select-none border-0 bg-transparent p-0 align-middle;
+    --face: #ecebe7;
+    --edge: #7d7a73;
+    --text: #121315;
+    --cut: 6px;
+    padding-top: 3px;
+  }
+  .plate-edge,
+  .plate-face {
+    clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  }
+  .plate-edge {
+    @apply absolute inset-x-0 bottom-0;
+    top: 3px;
+    background: var(--edge);
+  }
+  .plate-face {
+    @apply relative inline-flex min-h-[36px] items-center gap-2 whitespace-nowrap px-3.5 text-[13px] font-semibold;
+    background: var(--face);
+    color: var(--text);
+    transform: translateY(-3px);
+    transition: transform 110ms ease-out;
+  }
+  .plate:hover .plate-face { transform: translateY(-4px); }
+  .plate:active .plate-face { transform: translateY(-1px); }
+  .plate:disabled { @apply cursor-not-allowed opacity-50; }
+  .plate:disabled .plate-face { transform: translateY(-1px); }
+  .plate:focus-visible { outline-offset: 3px; }
+  .plate--quiet { --face: #262a30; --edge: #0a0b0c; --text: #ecebe7; }
+  .plate--allow { --face: #6cc58f; --edge: #3a7a54; --text: #0e1a12; }
+  .plate--block { --face: #f0705f; --edge: #9a3d31; --text: #1d0c09; }
+  .plate--sm .plate-face { @apply min-h-[30px] px-2.5 text-xs; }
 }
 
-::-webkit-scrollbar-track {
-  background: #0B192C;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+@media (prefers-reduced-motion: reduce) {
+  .plate-face { transition: none; }
+  .animate-row-in { animation: none; }
+  .animate-spin { animation: none; }
 }

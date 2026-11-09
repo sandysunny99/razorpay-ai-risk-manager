@@ -19,10 +19,15 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app/backend \
+    PYTHONPATH=/app:/app/backend \
     PORT=8000 \
     APP_MODE=demo \
-    DRY_RUN=true
+    DRY_RUN=true \
+    NETVRIO_ENV=test \
+    NETVRIO_DEMO_MODE=true \
+    NETVRIO_LIVE_AUTOSTART=true \
+    OTEL_EXPORTER_MODE=none \
+    AUDIT_DB_URL=sqlite:////tmp/netvrio_audit.db
 
 # Install system dependencies (curl for health check probe)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -49,10 +54,12 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # ── Production CMD (single-worker demo / Render free tier) ────────────────
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Netvrio API (backend/api) — also serves the built dashboard from /app/frontend/dist.
+# This is a DEMO container: synthetic x-tenant-id auth + demo signer, not production auth.
+CMD ["uvicorn", "backend.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
 
 # ── Multi-worker CMD (uncomment for Render paid tier / self-hosted) ────────
-# CMD ["gunicorn", "app.main:app", \
+# CMD ["gunicorn", "backend.api.app:app", \
 #      "--worker-class", "uvicorn.workers.UvicornWorker", \
 #      "--workers", "4", "--timeout", "60", \
 #      "--bind", "0.0.0.0:8000", \

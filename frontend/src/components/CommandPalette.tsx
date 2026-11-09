@@ -1,211 +1,145 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, CreditCard, ShieldAlert, Play, History, X, ArrowRight } from 'lucide-react';
-import { CardItem, ScenarioItem, AuditEvent, ZombieTokenAlert } from '../types';
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search } from 'lucide-react';
+import { useLive } from '../hooks/LiveContext';
+import { refreshIntelFeeds, updateGenerator, verifyLedgerFull } from '../services/api';
+import { getErrorStatus, getSafeApiError } from '../utils/errors';
+import { cx } from './ui';
 
-interface CommandPaletteProps {
-  isOpen: boolean;
-  onClose: () => void;
-  cards: CardItem[];
-  scenarios: ScenarioItem[];
-  zombies: ZombieTokenAlert[];
-  auditEvents: AuditEvent[];
-  onSelectCard: (cardId: string) => void;
-  onSelectScenario: (scenarioId: string) => void;
-}
-
-interface PaletteItem {
+interface Command {
   id: string;
-  category: 'Card' | 'Scenario' | 'Zombie Alert' | 'Audit';
-  title: string;
-  subtitle: string;
-  icon: any;
-  action: () => void;
+  label: string;
+  hint: string;
+  run: () => Promise<string | void> | string | void;
 }
 
-export const CommandPalette: React.FC<CommandPaletteProps> = ({
-  isOpen,
-  onClose,
-  cards,
-  scenarios,
-  zombies,
-  auditEvents,
-  onSelectCard,
-  onSelectScenario,
-}) => {
+/** Ctrl/⌘K palette. Every command performs a real action; results are reported inline. */
+export default function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+  const live = useLive();
   const [query, setQuery] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [active, setActive] = useState(0);
+  const [result, setResult] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       setQuery('');
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setActive(0);
+      setResult(null);
     }
-  }, [isOpen]);
+  }, [open]);
 
-  if (!isOpen) return null;
+  const commands = useMemo<Command[]>(() => {
+    const go = (path: string, label: string): Command => ({ id: `go-${path}`, label, hint: 'Go to', run: () => { navigate(path); onClose(); } });
+    const list: Command[] = [
+      go('/', 'Live operations'),
+      go('/threats', 'Threat intelligence'),
+      go('/ledger', 'Audit ledger'),
+      go('/integrations', 'Integrations'),
+      {
+        id: 'stream',
+        label: live.paused ? 'Resume event stream' : 'Pause event stream',
+        hint: 'Stream',
+        run: () => { live.setPaused(!live.paused); onClose(); },
+      },
+      {
+        id: 'verify',
+        label: 'Verify the whole audit ledger now',
+        hint: 'Ledger',
+        run: async () => ((await verifyLedgerFull()).chain_verified ? 'Full ledger verified: hash chain intact.' : 'Hash chain broken. Investigate the ledger.'),
+      },
+      {
+        id: 'feeds',
+        label: 'Refresh threat feeds',
+        hint: 'Threat intel',
+        run: async () => {
+          try {
+            const r = await refreshIntelFeeds();
+            const parts = Object.entries(r.results).map(([k, v]) => `${k}: ${v < 0 ? 'failed' : `${v} indicators`}`);
+            return parts.length ? parts.join(', ') : 'Live feeds are off (NETVRIO_TI_LIVE_FEEDS=false).';
+          } catch (err) {
+            return getErrorStatus(err) === 404 ? 'Feed refresh needs demo mode on the API.' : getSafeApiError(err);
+          }
+        },
+      },
+    ];
+    if (live.generator) {
+      const running = live.generator.running;
+      list.push({
+        id: 'traffic',
+        label: running ? 'Stop synthetic traffic' : 'Start synthetic traffic',
+        hint: 'Traffic',
+        run: async () => {
+          live.setGenerator(await updateGenerator({ running: !running }));
+          return running ? 'Synthetic traffic stopped.' : 'Synthetic traffic started.';
+        },
+      });
+    }
+    const q = query.trim();
+    if (/^aud_[\w-]+$/.test(q)) {
+      list.unshift({ id: 'open-audit', label: `Open audit record ${q}`, hint: 'Ledger', run: () => { navigate(`/ledger?id=${encodeURIComponent(q)}`); onClose(); } });
+    }
+    return list;
+  }, [live, navigate, onClose, query]);
 
-  // Build searchable items
-  const items: PaletteItem[] = [
-    ...scenarios.map((s) => ({
-      id: `scen_${s.id}`,
-      category: 'Scenario' as const,
-      title: s.name,
-      subtitle: s.description,
-      icon: Play,
-      action: () => {
-        onSelectScenario(s.id);
-        onClose();
-      },
-    })),
-    ...cards.map((c) => ({
-      id: `card_${c.card_id}`,
-      category: 'Card' as const,
-      title: `${c.cardholder_name} (${c.masked_pan})`,
-      subtitle: `Status: ${c.status} • Risk: ${c.previous_fraud_count > 0 ? 'HIGH' : 'NORMAL'}`,
-      icon: CreditCard,
-      action: () => {
-        onSelectCard(c.card_id);
-        onClose();
-      },
-    })),
-    ...zombies.map((z) => ({
-      id: `zomb_${z.token_id}`,
-      category: 'Zombie Alert' as const,
-      title: `Dead Card Token: ${z.token_id}`,
-      subtitle: `Masked: ${z.masked_pan || '****'} • Card Status: ${z.card_status || 'EXPIRED'} • ${z.reason || 'Active token on dead card'}`,
-      icon: ShieldAlert,
-      action: () => {
-        onSelectCard(z.card_id);
-        onClose();
-      },
-    })),
-    ...auditEvents.slice(0, 10).map((a) => ({
-      id: `aud_${a.event_id}`,
-      category: 'Audit' as const,
-      title: `${a.event_id} - ${a.action_executed || 'MONITOR'}`,
-      subtitle: `Score: ${a.risk_score} • Policy: ${a.policy_evaluated}`,
-      icon: History,
-      action: () => {
-        onClose();
-      },
-    })),
-  ];
+  const visible = commands.filter((c) => c.id === 'open-audit' || `${c.hint} ${c.label}`.toLowerCase().includes(query.trim().toLowerCase()));
 
-  const filtered = query.trim()
-    ? items.filter(
-        (i) =>
-          i.title.toLowerCase().includes(query.toLowerCase()) ||
-          i.subtitle.toLowerCase().includes(query.toLowerCase()) ||
-          i.category.toLowerCase().includes(query.toLowerCase())
-      )
-    : items.slice(0, 8);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % Math.max(1, filtered.length));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev - 1 + filtered.length) % Math.max(1, filtered.length));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (filtered[selectedIndex]) {
-        filtered[selectedIndex].action();
-      }
-    } else if (e.key === 'Escape') {
-      onClose();
+  const execute = async (c: Command) => {
+    setRunning(true);
+    try {
+      const msg = await c.run();
+      if (msg) setResult(msg);
+    } catch (err) {
+      setResult(getSafeApiError(err));
+    } finally {
+      setRunning(false);
     }
   };
 
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') onClose();
+    else if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(visible.length - 1, a + 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
+    else if (e.key === 'Enter' && visible[active]) { e.preventDefault(); execute(visible[active]); }
+  };
+
+  if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-black/75 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-xl bg-[#091526] border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Search Input */}
-        <div className="p-4 border-b border-slate-800 flex items-center gap-3">
-          <Search className="w-5 h-5 text-blue-400 flex-shrink-0" />
+    <div className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-md border border-line-strong bg-surface shadow-2xl" onKeyDown={onKey}>
+        <div className="flex items-center gap-2 border-b border-line px-3">
+          <Search className="h-4 w-4 text-ink-subtle" aria-hidden />
           <input
             ref={inputRef}
+            autoFocus
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelectedIndex(0);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="Search cards, scenarios, alerts, audit IDs..."
-            className="w-full bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none"
+            onChange={(e) => { setQuery(e.target.value); setActive(0); setResult(null); }}
+            placeholder="Type a command or paste an audit ID"
+            aria-label="Command"
+            className="w-full bg-transparent py-3 text-sm text-ink placeholder:text-ink-subtle focus:outline-none"
           />
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
-
-        {/* Results list */}
-        <div className="max-h-80 overflow-y-auto p-2 space-y-1 scrollbar-thin">
-          {filtered.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500">
-              No matching records found for "{query}".
-            </div>
-          ) : (
-            filtered.map((item, idx) => {
-              const Icon = item.icon;
-              const isSelected = idx === selectedIndex;
-              return (
-                <div
-                  key={item.id}
-                  onClick={item.action}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`p-3 rounded-xl flex items-center justify-between cursor-pointer transition ${
-                    isSelected
-                      ? 'bg-blue-600/20 border border-blue-500/40 text-white'
-                      : 'hover:bg-slate-800/50 text-slate-300 border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        isSelected ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold truncate">{item.title}</span>
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700">
-                          {item.category}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 truncate">{item.subtitle}</p>
-                    </div>
-                  </div>
-                  <ArrowRight
-                    className={`w-4 h-4 flex-shrink-0 transition ${
-                      isSelected ? 'text-blue-400 translate-x-1' : 'text-slate-600'
-                    }`}
-                  />
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Footer shortcuts hint */}
-        <div className="px-4 py-2 bg-slate-950/80 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-500">
-          <span>↑↓ to navigate • ↵ to select</span>
-          <span>ESC to exit</span>
-        </div>
+        <ul className="max-h-72 overflow-auto py-1" role="listbox" aria-label="Commands">
+          {visible.length === 0 && <li className="px-4 py-3 text-sm text-ink-subtle">No command matches "{query}".</li>}
+          {visible.map((c, i) => (
+            <li key={c.id} role="option" aria-selected={i === active}>
+              <button
+                onMouseEnter={() => setActive(i)}
+                onClick={() => execute(c)}
+                disabled={running}
+                className={cx('flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm', i === active ? 'bg-raised text-ink' : 'text-ink-muted')}
+              >
+                <span>{c.label}</span>
+                <span className="text-xs text-ink-subtle">{c.hint}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        {result && <p className="border-t border-line px-4 py-2.5 text-sm text-ink" role="status">{result}</p>}
       </div>
     </div>
   );
-};
+}
