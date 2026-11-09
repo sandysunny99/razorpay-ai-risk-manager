@@ -16,6 +16,7 @@ import time
 
 from fastapi import APIRouter, HTTPException, Request
 
+from backend.api.ratelimit import ingest_limit, limiter
 from backend.api.routes.gateway_common import run_gateway_event
 from backend.security.hmac import verify_hmac_sha256
 
@@ -78,6 +79,7 @@ def normalize_razorpay_event(body: dict, event_id_header: str | None, tenant_id:
 
 
 @router.post("/webhook")
+@limiter.limit(ingest_limit)
 async def razorpay_webhook(request: Request):
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
     if not secret:

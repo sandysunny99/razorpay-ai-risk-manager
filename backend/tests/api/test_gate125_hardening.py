@@ -93,7 +93,9 @@ def test_telemetry_span_export_leakage():
     add_span_processor(SimpleSpanProcessor(memory_exporter))
 
     now = int(time.time())
-    u = str(uuid.uuid4())[:8]
+    # No digit 9 in the random part: the test asserts "999" (the CVV) never appears in telemetry,
+    # and a random id ending in ...a999 made it fail intermittently.
+    u = str(uuid.uuid4())[:8].replace("9", "x")
     payload = {
         "event_id": f"evt_leak_{u}",
         "timestamp": now,

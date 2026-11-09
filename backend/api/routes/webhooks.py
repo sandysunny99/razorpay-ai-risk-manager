@@ -12,12 +12,15 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from backend.api.dependencies import get_current_tenant, get_webhook_secret
 from backend.api.models import WebhookPayload
+from backend.api.ratelimit import ingest_limit, limiter
 from backend.audit.audit_log import SqlAuditRepository
 from backend.evidence.builder import EvidenceBuilder
 from backend.llm.policy import validate_llm_advisory
 from backend.llm.providers import CloudflareProvider, GrokProvider, HuggingFaceProvider
 from backend.llm.router import RiskLLMRouter
 from backend.llm.schemas import RiskLLMRequest
+from backend.ml.features import from_live_event
+from backend.ml.scorer import escalation_enabled, escalation_threshold, ml_scorer
 from backend.observability.tracing import tracer
 from backend.policy.engine import PolicyEngine
 from backend.policy.models import MerchantPolicy, SecurityValidationResult
@@ -30,6 +33,7 @@ from backend.runtime_env import demo_mode_enabled
 from backend.security.dlp import redact_sensitive_data
 from backend.security.hmac import verify_hmac_sha256
 from backend.security.idempotency import get_idempotency_store
+from backend.security.pii import FREE_TEXT_FIELDS, pii_scrubber
 from backend.security.replay import verify_replay
 from backend.security.tenant import TenantContext
 from backend.threat_intel.exposure import exposure_store
@@ -184,6 +188,13 @@ def run_pipeline(
 
             # 6. DLP / Redaction
             safe_payload = redact_sensitive_data(payload)
+            # 6a. Presidio PII masking of customer free text before evidence, audit, stream or LLM
+            pii_found: set = set()
+            safe_data = safe_payload.get("data") if isinstance(safe_payload.get("data"), dict) else {}
+            for field in FREE_TEXT_FIELDS:
+                if isinstance(safe_data.get(field), str):
+                    safe_data[field], found = pii_scrubber.scrub(safe_data[field])
+                    pii_found.update(found)
             # Telemetry is sanitized implicitly via span processors in production, but we explicitly sanitize span attributes here too
 
             # Phase 4: Explicit adapters, no arbitrary flattening
@@ -227,6 +238,25 @@ def run_pipeline(
             with tracer.start_as_current_span("zombie_card_saver", record_exception=False):
                 zombie_ref = payload_obj.token or payload_obj.fingerprint or "unknown"
                 zombie_assessment = zombie_saver.analyze(zombie_ref, tenant_id, merchant_id, zombie_input)
+
+            # 8b. ML second opinion (LightGBM + TreeSHAP reasons). Fail-safe: None when unavailable.
+            with tracer.start_as_current_span("ml_second_opinion", record_exception=False):
+                exposure_conf = next((m.confidence for m in ti_matches if m.category == "card_exposed"), None)
+                ml_assessment = ml_scorer.score(from_live_event(
+                    amount=risk_input.get("amount"),
+                    velocity=risk_input.get("velocity_1h"),
+                    data=raw_data,
+                    exposure_confidence=exposure_conf,
+                    token_revoked=bool(zombie_input.get("token_revoked")),
+                    zombie_signals=list(zombie_assessment.signals),
+                    lifecycle=zombie_input.get("card_lifecycle"),
+                ))
+                ml_escalate = bool(
+                    ml_assessment and escalation_enabled() and ml_assessment["probability"] >= escalation_threshold()
+                )
+                if ml_assessment:
+                    ml_assessment["escalation_threshold"] = escalation_threshold()
+                    ml_assessment["escalated"] = False
 
             # 9. Evidence Creation
             with tracer.start_as_current_span("evidence_builder", record_exception=False):
@@ -294,8 +324,11 @@ def run_pipeline(
                     risk_assessment=risk_assessment,
                     merchant_policy=merchant_policy,
                     security_validation=sec_valid,
-                    zombie_remediation=zombie_rem
+                    zombie_remediation=zombie_rem,
+                    ml_escalation=ml_escalate,
                 )
+                if ml_assessment:
+                    ml_assessment["escalated"] = "ML_SECOND_OPINION_REVIEW" in policy_decision.reason_codes
                 span.set_attribute("decision", policy_decision.decision)
 
             # 11b. Feed confirmed outcomes back into threat intelligence
@@ -322,6 +355,7 @@ def run_pipeline(
                     "risk_level": risk_assessment.risk_level,
                     "zombie_detected": len(getattr(zombie_assessment, "signals", [])) > 0,
                     "threat_matches": [{"source": m.source, "category": m.category} for m in ti_matches],
+                    "ml_probability": ml_assessment["probability"] if ml_assessment else None,
                 }
                 audit_hash = audit_repo.append_record(audit_record)
 
@@ -336,6 +370,8 @@ def run_pipeline(
                 "audit_id": audit_record["audit_id"],
                 "audit_hash": audit_hash,
                 "threat_intel": [m.to_dict() for m in ti_matches],
+                "ml_assessment": ml_assessment,
+                "pii_masked": sorted(pii_found),
                 "zombie_signal": {
                     "impact": getattr(zombie_assessment, 'impact', None),
                     "severity": getattr(zombie_assessment, 'severity', None),
@@ -362,6 +398,8 @@ def _event_summary(result: dict, payload_meta: dict) -> dict:
         "zombie": result.get("zombie_signal"),
         "ai_provider": (result.get("ai_advisory") or {}).get("provider", "UNAVAILABLE"),
         "threat": result.get("threat_intel") or [],
+        "ml": result.get("ml_assessment"),
+        "pii_masked": result.get("pii_masked") or [],
         "audit_id": result.get("audit_id"),
         **payload_meta,
     }
@@ -443,6 +481,7 @@ def process_and_publish(
 
 
 @router.post("/payment")
+@limiter.limit(ingest_limit)
 async def process_payment_webhook(
     request: Request,
     tenant_id: str = Depends(get_current_tenant),

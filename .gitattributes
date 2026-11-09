@@ -1,3 +1,6 @@
 # Preserve exact byte sequences for frozen evaluation datasets across all platforms
 evaluation/*.jsonl text eol=crlf
 docs/TEST_SET_HASH.txt text eol=lf
+
+# Trained model artifacts: never rewrite line endings
+backend/ml/model/*.txt -text

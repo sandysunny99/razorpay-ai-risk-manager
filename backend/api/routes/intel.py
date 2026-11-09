@@ -10,6 +10,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from backend.api.ratelimit import ingest_limit, limiter
 from backend.api.routes.live import get_stream_tenant, require_demo_mode
 from backend.realtime.bus import event_bus
 from backend.threat_intel.exposure import FINGERPRINT_RE, exposure_store
@@ -70,6 +71,7 @@ class ExposureReport(BaseModel):
 
 
 @router.post("/exposures")
+@limiter.limit(ingest_limit)
 async def ingest_exposures(request: Request):
     secret = os.getenv("EXPOSURE_FEED_SECRET")
     if not secret:

@@ -35,6 +35,9 @@ Design direction and the anti-slop delivery gate: [DESIGN.md](DESIGN.md). Full a
 8. **Threat intelligence** — local indicator store (synthetic seed, opt-in Tor exit list and Spamhaus DROP), safe parsing, fail-static refresh; revocations learned from Zombie Card Saver are enforced on the next use.
 9. **Card exposure monitoring** — an isolated [OnionClaw](https://github.com/jacobjandon/onionclaw) collector plus `scripts/onionclaw_exposure_adapter.py` reports leaked cards as keyed fingerprints only; Netvrio revokes linked tokens and blocks exposed cards.
 10. **YouPI-PG (UPI)** — adapter for the self-hosted [YouPI-PG](https://github.com/youpi-pg/YouPI-PG) gateway (experimental, not NPCI/bank approved): V1/V2 signatures, delivery-id de-duplication, unreconciled payments flagged.
+11. **ML second opinion** — LightGBM with per-decision TreeSHAP reasons. Layered as rules first, model second: the model can only send an otherwise allowed payment to human review. Trained on a scenario simulator (`python -m backend.ml.train`); the model card in `backend/ml/model/` records metrics and why the bundled evaluation set is not used for training.
+12. **PII masking** — [Presidio](https://github.com/data-privacy-stack/presidio) masks cards, UPI IDs, Indian mobile numbers, Aadhaar, PAN, e-mail and IPs in customer free text before evidence, audit, the stream or any LLM; regex fallback when Presidio is not installed (`backend/requirements-privacy.txt`).
+13. **Abuse and supply-chain controls** — per-client rate limits on ingest endpoints; Bandit, pip-audit and Gitleaks in CI. WAF, CrowdSec and OpenBao guidance: [docs/EDGE_SECURITY.md](docs/EDGE_SECURITY.md).
 
 ## Run it
 
@@ -96,6 +99,9 @@ Set `YOUPI_WEBHOOK_SECRET` (optionally `YOUPI_REQUIRE_V2=true`, `YOUPI_TENANT_ID
 | `RAZORPAY_WEBHOOK_SECRET` / `RAZORPAY_TENANT_ID` | Razorpay adapter. |
 | `YOUPI_WEBHOOK_SECRET` / `YOUPI_REQUIRE_V2` / `YOUPI_TENANT_ID` | YouPI-PG adapter. |
 | `EXPOSURE_FEED_SECRET` / `FINGERPRINT_HMAC_SECRET` | Card exposure ingestion and the shared card-fingerprint key. |
+| `NETVRIO_ML_ESCALATE` / `NETVRIO_ML_THRESHOLD` | Let the model send ALLOW decisions to review (off by default; on in Docker demo) and the score threshold (0.8). |
+| `NETVRIO_PII_ENGINE` | `auto` (Presidio if installed), `presidio` or `regex`. |
+| `NETVRIO_RATE_LIMIT` / `RATE_LIMIT_STORAGE_URI` | Ingest rate limit per client (default `300/minute`) and its storage (`memory://` or `redis://...`). |
 | `NETVRIO_TI_LIVE_FEEDS` / `NETVRIO_TI_REFRESH_S` | Download Tor exit / Spamhaus DROP lists (off by default) and refresh interval. |
 | `AUDIT_DB_URL` | Audit ledger database (default `sqlite:///netvrio_audit.db`). |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated; defaults to Vite dev origins outside production. |
@@ -126,8 +132,9 @@ python -m pytest backend/tests -q
 cd frontend && npx vitest run
 ```
 
-* **Backend:** 316 passed / 1 skipped (live Razorpay order test needs real keys); coverage gate 81%
-* **Frontend:** 22 passed; `tsc` strict + production build pass
+* **Backend:** 329 passed / 1 skipped (live Razorpay order test needs real keys); coverage gate 81%
+* **Supply chain:** pip-audit no known vulnerabilities; Bandit 0 medium+ findings
+* **Frontend:** 23 passed; `tsc` strict + production build pass
 * **Smoke test:** `python scripts/demo_smoke_test.py` against a running API — 8/8
 
 ## Limitations

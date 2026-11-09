@@ -81,10 +81,22 @@ class RiskLLMRequest(BaseModel):
             zombie_signal=z_signal,
             evidence_package_id=ev_id,
             evidence_summary=ev_summary,
-            transaction_context={"ip_address": dlp_payload.get("data", {}).get("ip_address", "unknown")},
+            transaction_context={"ip_network": _ip_network(dlp_payload.get("data", {}).get("ip_address"))},
             request_type="payment",
             zombie_severity=z_severity
         )
+
+def _ip_network(value) -> str:
+    """Customer IPs are personal data: an external LLM only ever sees the /24 (IPv4) or /48 (IPv6)."""
+    import ipaddress
+
+    try:
+        ip = ipaddress.ip_address(str(value).strip())
+    except ValueError:
+        return "unknown"
+    prefix = 24 if ip.version == 4 else 48
+    return str(ipaddress.ip_network(f"{ip}/{prefix}", strict=False))
+
 
 class RiskLLMResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

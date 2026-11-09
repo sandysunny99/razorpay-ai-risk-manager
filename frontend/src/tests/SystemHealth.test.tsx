@@ -9,6 +9,7 @@ vi.mock('../services/api', () => ({
   getHealth: vi.fn(() => Promise.resolve({ status: 'ok' })),
   getRazorpayStatus: vi.fn(() => new Promise(() => undefined)),
   getYoupiStatus: vi.fn(() => new Promise(() => undefined)),
+  getComponents: vi.fn(() => new Promise(() => undefined)),
   updateGenerator: vi.fn(),
 }));
 vi.mock('../hooks/LiveContext', () => ({

@@ -24,22 +24,38 @@ before each logic fix. Every item below has a regression test unless marked othe
 | 14 | CI | 441 Ruff errors in new code (CI lint gate would fail); release guard required deleted components. | Red pipeline. | Lint clean; release guard lists the files that exist. | `ruff check backend scripts`, `release_guard.py`. |
 | 15 | Deploy | Dockerfile launched the legacy `app.main`, not the Netvrio API the frontend talks to; CORS was `*` with credentials in test. | The container served the wrong backend. | Docker runs `backend.api.app` and serves the built SPA; CORS uses explicit origins, no credentials. | Live run on :8000. |
 
+### Second round (ML, privacy, supply chain)
+
+| # | Area | Finding | Impact | Fix | Evidence |
+|---|---|---|---|---|---|
+| 16 | Supply chain | `python-jose` 3.5.0 and its `ecdsa` dependency have advisories with **no fixed version** (pip-audit). | JWT handling in the legacy auth relied on an unmaintained library. | Migrated to PyJWT; pip-audit now reports no known vulnerabilities and runs in CI. | `pip-audit -r backend/requirements.txt`; `test_rbac_auth.py`. |
+| 17 | Privacy | The LLM request carried the **raw customer IP** to external providers. | Personal data sent to third parties. | Only the /24 (IPv4) or /48 (IPv6) network is sent. | `test_llm_never_receives_raw_ip`. |
+| 18 | Privacy | Customer free text (payment notes) reached evidence, the stream and the LLM unmasked. | Phone numbers, UPI IDs, Aadhaar, PAN, cards exposed downstream. | Presidio masking (custom UPI and Indian mobile recognizers) with a regex fallback, right after DLP. | `test_free_text_pii_is_masked`, `test_pipeline_masks_notes_everywhere`. |
+| 19 | Data / ML | The bundled `evaluation/` labels are **exactly one rule** (`(card_exposed and confidence >= 0.7) or zombie`) and velocity alone separates them. A model trained on it scored PR-AUC 1.0 but gave a zombie token at normal velocity a 0.4% score. | A "perfect" model that misses the flagship case. | Trained on a scenario simulator with overlapping distributions and label noise, with monotone constraints. The audit is written into the model card. | `test_model_ranks_live_style_cases_sensibly`, `model_card.json`. |
+| 20 | Demo realism | The traffic generator spread ~2 events/s over 120 customers (~60 payments per customer per hour), so everyone looked like a bot and the review queue flooded. | Misleading demo; approval rate ~76%. | 5,000-customer pool plus 4 dedicated bot accounts. | Live run. |
+| 21 | Abuse | Public ingest endpoints had no rate limit. | Cheap flooding of signature checks and the audit ledger. | SlowAPI per-client limit (`NETVRIO_RATE_LIMIT`, default 300/min) on webhook, Razorpay, YouPI and exposure endpoints. | `test_ingest_endpoints_are_rate_limited`. |
+| 22 | Testing | `test_telemetry_span_export_leakage` failed intermittently: a random event id could contain "999", the CVV it checks for. | Flaky gate. | Random part excludes the digit 9. | Suite stable. |
+
 ## New capabilities (security reviewed)
 
 - **Threat intelligence** (`backend/threat_intel/`): local indicator store, so no per-payment calls and no customer data sent to third parties. Feeds (Tor exit list, Spamhaus DROP) are opt-in, HTTPS-only, size-capped and strictly parsed (non-global and over-broad ranges dropped), and fail static on errors. Matches are evidence only.
 - **Card exposure monitoring** (OnionClaw): `scripts/onionclaw_exposure_adapter.py` runs on an isolated collector, turns leaked card numbers into the existing keyed fingerprint and discards them. Netvrio receives signed fingerprints only (`POST /intel/exposures`), revokes linked tokens at once and blocks exposed cards inline. OnionClaw itself is not embedded: it needs Tor, and automated dark-web access needs legal sign-off.
 - **YouPI-PG UPI adapter**: V1 and timestamp-bound V2 signatures, delivery-id de-duplication, unreconciled payments flagged. The project is experimental and not NPCI or bank approved; observed success is not settlement.
+- **ML second opinion**: LightGBM (MIT) with per-decision reasons from its built-in TreeSHAP. It can only escalate an ALLOW to REVIEW (`NETVRIO_ML_ESCALATE`), never block. Fails safe when the model is missing.
+- **PII masking**: Presidio (MIT, now maintained at github.com/data-privacy-stack/presidio; github.com/microsoft/presidio redirects there and PyPI lists it as the homepage).
+- **Supply chain in CI**: Bandit over the whole backend (0 findings at medium or above), pip-audit, Gitleaks with a narrow allowlist for synthetic fixtures.
 - **Analyst resolutions**: Approve / Decline on REVIEW decisions, written to the hash chain once, broadcast live.
 
 ## Verification
 
 | Gate | Result |
 |---|---|
-| Backend tests | 316 passed, 1 skipped (live Razorpay order test needs real keys) |
+| Backend tests | 329 passed, 1 skipped (live Razorpay order test needs real keys) |
 | Coverage gate (`backend/app`, ≥ 75%) | 81% |
 | Ruff (`backend/ scripts/`) | clean |
 | Release guard, frozen test-set hash | pass |
-| Frontend | `tsc` strict, 22 Vitest tests, production build |
+| Frontend | `tsc` strict, 23 Vitest tests, production build |
+| pip-audit / Bandit | no known vulnerabilities / 0 medium+ findings |
 | Smoke test against running API | 8/8 |
 | Live browser | stream, review approve, exposure drill (40 fingerprints, linked tokens revoked and blocked), YouPI webhook + duplicate, command palette, 375px layout |
 

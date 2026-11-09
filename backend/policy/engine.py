@@ -21,7 +21,8 @@ class PolicyEngine:
         risk_assessment: RiskAssessment,
         merchant_policy: MerchantPolicy,
         security_validation: SecurityValidationResult,
-        zombie_remediation: Optional[ActionDecision] = None
+        zombie_remediation: Optional[ActionDecision] = None,
+        ml_escalation: bool = False,
     ) -> PolicyDecision:
         """
         The Policy Engine is the ONLY component allowed to convert risk evidence into an action.
@@ -62,6 +63,13 @@ class PolicyEngine:
         if zombie_decision is not None and _SEVERITY[zombie_decision] >= _SEVERITY[decision]:
             decision = zombie_decision
             policy_id = "zombie_pol_v1"
+
+        # 4. ML second opinion: may only send an otherwise-allowed payment to a human. It can never
+        #    block, and never relax a stricter rule-based outcome.
+        if ml_escalation and decision == ActionDecision.ALLOW:
+            decision = ActionDecision.REVIEW
+            policy_id = "ml_review_pol_v1"
+            reason_codes.append("ML_SECOND_OPINION_REVIEW")
 
         return PolicyDecision(
             policy_id=policy_id,

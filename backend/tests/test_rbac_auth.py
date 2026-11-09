@@ -13,7 +13,7 @@ from datetime import timedelta
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from jose import JWTError
+from jwt import PyJWTError as JWTError
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -139,7 +139,7 @@ def test_expired_jwt_token():
 
 def test_invalid_signature_jwt_rejected():
     """Token signed with wrong key is rejected."""
-    from jose import jwt
+    import jwt
     fake_token = jwt.encode({"sub": "attacker", "role": "admin"}, "wrong_key_secret_2026", algorithm="HS256")
     with pytest.raises(JWTError):
         decode_access_token(fake_token)

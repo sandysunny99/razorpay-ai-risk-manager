@@ -1,0 +1,79 @@
+{
+  "model": "LightGBM binary classifier. Second opinion only: it can escalate an ALLOW to REVIEW, never block.",
+  "lightgbm_version": "4.6.0",
+  "features": [
+    "log_amount",
+    "velocity",
+    "country_mismatch",
+    "card_exposed",
+    "exposure_confidence",
+    "token_active",
+    "token_age_days",
+    "is_zombie_token",
+    "card_expired",
+    "device_new",
+    "failed_attempts"
+  ],
+  "monotone_constraints": {
+    "velocity": 1,
+    "country_mismatch": 1,
+    "card_exposed": 1,
+    "exposure_confidence": 1,
+    "token_active": -1,
+    "is_zombie_token": 1,
+    "card_expired": 1,
+    "device_new": 1,
+    "failed_attempts": 1
+  },
+  "training_data": "backend/ml/simulate.py: 30k synthetic rows, 8% fraud in 4 scenarios, 2% label noise; 20k/5k/5k split",
+  "missingness_augmentation": {
+    "features": [
+      "country_mismatch",
+      "token_age_days",
+      "device_new",
+      "failed_attempts"
+    ],
+    "rate": 0.3,
+    "seed": 2026
+  },
+  "holdout_metrics": {
+    "pr_auc": 0.8487,
+    "roc_auc": 0.9184,
+    "recall_at_1pct_fpr": 0.8244,
+    "recall_at_5pct_fpr": 0.845,
+    "fraud_rate": 0.0968,
+    "n": 5000
+  },
+  "holdout_metrics_live_fields_missing": {
+    "pr_auc": 0.7841,
+    "roc_auc": 0.9067,
+    "recall_at_1pct_fpr": 0.6508,
+    "recall_at_5pct_fpr": 0.7851,
+    "fraud_rate": 0.0968,
+    "n": 5000
+  },
+  "cross_dataset_metrics_evaluation_test": {
+    "pr_auc": 1.0,
+    "roc_auc": 1.0,
+    "recall_at_1pct_fpr": 1.0,
+    "recall_at_5pct_fpr": 1.0,
+    "fraud_rate": 0.2233,
+    "n": 300
+  },
+  "probes": {
+    "ordinary payment": 0.1942,
+    "zombie token, normal velocity": 0.9994,
+    "exposed card (0.9), new device": 0.9985,
+    "card testing burst": 0.9994,
+    "busy genuine customer": 0.2193
+  },
+  "why_not_evaluation_set": {
+    "label_rule": "(card_exposed and exposure_confidence >= 0.7) or is_zombie_token",
+    "label_rule_agreement": 1.0,
+    "velocity_shortcut": {
+      "fraud_min_velocity": 2,
+      "legit_max_velocity": 2
+    }
+  },
+  "caveat": "Trained and measured on synthetic data, so the numbers describe the simulator, not real Razorpay traffic. Retrain on labelled production data before relying on it; keep NETVRIO_ML_ESCALATE off until then unless you are demonstrating the flow."
+}

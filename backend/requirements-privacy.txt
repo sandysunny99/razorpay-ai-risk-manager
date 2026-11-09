@@ -1,0 +1,5 @@
+# Optional: Presidio PII masking (https://github.com/data-privacy-stack/presidio, MIT).
+# Without it Netvrio falls back to built-in regex masking for the same entity types.
+# After installing: python -m spacy download en_core_web_sm
+presidio-analyzer==2.2.366
+presidio-anonymizer==2.2.366

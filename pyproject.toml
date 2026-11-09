@@ -34,6 +34,8 @@ ignore = [
 # Scripts — test credentials, argparse defaults, long diagnostic strings
 # Synthetic traffic generator — random is for simulation, not cryptography
 "backend/realtime/generator.py" = ["S311"]
+"backend/ml/train.py" = ["S311"]  # seeded RNG for reproducible missingness augmentation
+"backend/ml/simulate.py" = ["S311"]  # seeded synthetic data generation
 "scripts/**" = ["S105", "S107", "S311", "S603", "S607"]
 # Alembic generated migration files — boilerplate imports and style
 "backend/alembic/**" = ["F401", "I001", "W291", "E302"]

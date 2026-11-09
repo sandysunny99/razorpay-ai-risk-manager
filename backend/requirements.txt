@@ -20,8 +20,11 @@ gunicorn>=22.0.0
 # ── Razorpay Test API Integration ──
 razorpay>=1.4.2
 # ── Phase 5: Production JWT / RBAC ──
-python-jose[cryptography]>=3.3.0
+PyJWT>=2.10.1  # replaces python-jose (unfixed CVEs in python-jose and ecdsa)
 # ── Session 4: OpenTelemetry Distributed Tracing ──
 opentelemetry-sdk>=1.24.0
 opentelemetry-exporter-otlp-proto-http>=1.24.0
 opentelemetry-instrumentation-fastapi>=0.45b0
+# ── ML second opinion (LightGBM, MIT; TreeSHAP reasons are built in) ──
+lightgbm>=4.6.0
+numpy>=1.26

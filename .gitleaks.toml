@@ -1,0 +1,22 @@
+# Gitleaks configuration: default rules plus a narrow allowlist of known, non-secret test values.
+# Anything not listed here (for example a real rzp_live_/rzp_test_ key) still fails CI.
+title = "netvrio"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic fixtures and demo-only defaults; none of these grant access to anything"
+regexes = [
+  '''rzp_live_9a8b7c6d5e''',                                   # DLP masking fixture (synthetic)
+  '''rzp_test_mock_agent_(key|secret)''',                       # .env.example placeholders
+  '''dummy_webhook_secret''',                                   # test-mode-only internal secret
+  '''ci_test_hmac_secret_key_only_for_testing_2026''',          # CI test key
+  '''razorpay_risk_agent_(hmac_secret_key|master_aes256_gcm_secret_key)_2026(_demo)?''',  # old compose demo defaults
+  '''(youpi|exposure_feed|rzp)_test_(whsec|secret)''',          # unit-test secrets
+]
+paths = [
+  '''backend/tests/''',
+  '''frontend/src/tests/''',
+  '''evaluation/''',
+]

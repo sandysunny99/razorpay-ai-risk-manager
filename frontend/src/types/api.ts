@@ -120,6 +120,8 @@ export interface LiveEvent {
   ai_provider?: string;
   audit_id?: string;
   threat?: ThreatMatch[];
+  ml?: MlAssessment | null;
+  pii_masked?: string[];
   // RESOLVED (analyst outcome for a REVIEW decision)
   resolves?: string;
   resolution?: 'APPROVE' | 'DECLINE';
@@ -216,4 +218,46 @@ export interface GatewayStatus {
   last_event_at: number | null;
   experimental?: boolean;
   require_v2?: boolean;
+}
+
+export interface MlReason {
+  feature: string;
+  direction: 'raises' | 'lowers';
+  contribution: number;
+  value: number | null;
+}
+
+export interface MlAssessment {
+  model: string;
+  probability: number;
+  reasons: MlReason[];
+  escalated?: boolean;
+  escalation_threshold?: number;
+}
+
+interface Metrics {
+  pr_auc: number;
+  roc_auc: number;
+  recall_at_1pct_fpr: number;
+  recall_at_5pct_fpr: number;
+  fraud_rate: number;
+  n: number;
+}
+
+export interface ComponentsStatus {
+  pii: { engine: 'presidio' | 'regex'; error: string | null; entities: string[] };
+  ml: {
+    available: boolean;
+    error: string | null;
+    escalation_enabled: boolean;
+    escalation_threshold: number;
+    lightgbm_version?: string;
+    training_data?: string;
+    holdout_metrics?: Metrics;
+    holdout_metrics_live_fields_missing?: Metrics;
+    cross_dataset_metrics_evaluation_test?: Metrics;
+    probes?: Record<string, number>;
+    why_not_evaluation_set?: { label_rule: string; label_rule_agreement: number; velocity_shortcut: Record<string, number> };
+    caveat?: string;
+  };
 }

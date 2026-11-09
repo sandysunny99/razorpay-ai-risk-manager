@@ -20,6 +20,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
+from backend.api.ratelimit import ingest_limit, limiter
 from backend.api.routes.gateway_common import run_gateway_event
 
 router = APIRouter()
@@ -76,6 +77,7 @@ def normalize_youpi_event(body: dict, delivery_id: str, tenant_id: str) -> Optio
 
 
 @router.post("/webhook")
+@limiter.limit(ingest_limit)
 async def youpi_webhook(request: Request):
     secret = os.getenv("YOUPI_WEBHOOK_SECRET")
     if not secret:

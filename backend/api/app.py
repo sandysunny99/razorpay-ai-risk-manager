@@ -1,18 +1,23 @@
 from contextlib import asynccontextmanager
 import os
 from pathlib import Path
+import threading
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
+from backend.api.ratelimit import limiter, rate_limit_exceeded
 from backend.api.routes import audit, cases, health, intel, live, razorpay, risk, webhooks, youpi
+from backend.ml.scorer import ml_scorer
 from backend.observability.middleware import SecurityObservabilityMiddleware
 from backend.realtime.generator import all_generators, get_generator
 from backend.runtime_env import demo_mode_enabled, is_production
+from backend.security.pii import pii_scrubber
 from backend.threat_intel.service import threat_intel
 
 
@@ -22,12 +27,16 @@ async def lifespan(_app: FastAPI):
     if demo_mode_enabled() and os.getenv("NETVRIO_LIVE_AUTOSTART", "false").lower() == "true":
         get_generator(os.getenv("NETVRIO_LIVE_TENANT", "tenant_123")).start()
     threat_intel.start_background_refresh()  # no-op unless NETVRIO_TI_LIVE_FEEDS=true
+    # Presidio loads a spaCy model (several seconds); do it off the request path.
+    threading.Thread(target=lambda: (pii_scrubber.status(), ml_scorer.available), daemon=True).start()
     yield
     await threat_intel.stop()
     for gen in all_generators():
         await gen.stop()
 
 app = FastAPI(title="Netvrio API", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded)
 
 # Swagger/ReDoc pull their assets from a CDN, so they get a relaxed CSP.
 _DOCS_PATHS = ("/docs", "/redoc", "/openapi.json")

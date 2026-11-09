@@ -11,6 +11,7 @@ export type StageId =
   | 'risk'
   | 'intel'
   | 'zombie'
+  | 'ml'
   | 'ai'
   | 'policy'
   | 'audit';
@@ -35,6 +36,7 @@ export const PIPELINE: StageDef[] = [
   { id: 'risk', label: 'Deterministic risk', group: 'Analysis' },
   { id: 'intel', label: 'Threat intel and exposure', group: 'Analysis' },
   { id: 'zombie', label: 'Zombie Card Saver', group: 'Analysis' },
+  { id: 'ml', label: 'ML second opinion', group: 'Analysis' },
   { id: 'ai', label: 'AI advisory', group: 'Analysis' },
   { id: 'policy', label: 'Policy engine', group: 'Decision' },
   { id: 'audit', label: 'Hash-chained audit', group: 'Decision' },

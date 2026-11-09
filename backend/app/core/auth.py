@@ -18,7 +18,10 @@ from typing import Any, Callable, Dict, Optional
 
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+
+# PyJWT replaces python-jose (unfixed advisories in python-jose and its ecdsa dependency).
+import jwt
+from jwt import PyJWTError as JWTError
 
 from app.core.config import settings
 

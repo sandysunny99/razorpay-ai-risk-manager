@@ -1,0 +1,2 @@
+# Training only (python -m backend.ml.train). The API does not need these.
+scikit-learn>=1.5

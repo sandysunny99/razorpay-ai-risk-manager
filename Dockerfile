@@ -26,6 +26,7 @@ ENV PYTHONUNBUFFERED=1 \
     NETVRIO_ENV=test \
     NETVRIO_DEMO_MODE=true \
     NETVRIO_LIVE_AUTOSTART=true \
+    NETVRIO_ML_ESCALATE=true \
     OTEL_EXPORTER_MODE=none \
     AUDIT_DB_URL=sqlite:////tmp/netvrio_audit.db
 
@@ -33,11 +34,19 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libpq5 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python backend dependencies
+# Install Python backend dependencies (libgomp1 above is LightGBM's OpenMP runtime)
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Presidio PII masking (+ small spaCy model). Without it the API falls back to regex masking.
+ARG INSTALL_PRESIDIO=true
+COPY backend/requirements-privacy.txt ./requirements-privacy.txt
+RUN if [ "$INSTALL_PRESIDIO" = "true" ]; then \
+      pip install --no-cache-dir -r requirements-privacy.txt && python -m spacy download en_core_web_sm; \
+    fi
 
 # Copy backend application code only
 # NOTE: .dockerignore excludes evaluation/, scripts/, docs/, *.md from the build context.

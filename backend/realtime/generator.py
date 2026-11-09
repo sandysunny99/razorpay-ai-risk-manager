@@ -23,8 +23,11 @@ import uuid
 from fastapi import HTTPException
 
 # Synthetic population ------------------------------------------------------------------------
-_CUSTOMERS = [f"cust_{i:04d}" for i in range(1, 121)]
-_BURST_CUSTOMERS = _CUSTOMERS[:4]                          # a few "bot-like" customers that burst
+# The pool must be large relative to the event rate: at 2 events/s, 5,000 customers average about
+# 1.4 payments per hour each, like real shoppers. (A 120-customer pool made everyone look like a bot
+# under the 1-hour velocity window and flooded the review queue.)
+_CUSTOMERS = [f"cust_{i:05d}" for i in range(1, 5001)]
+_BURST_CUSTOMERS = [f"cust_bot_{i}" for i in range(1, 5)]  # a few bot-like customers that burst
 _ACTIVE_TOKENS = [f"tok_live_{i:04d}" for i in range(1, 201)]
 _EXPIRED_TOKENS = [f"tok_expired_{i:03d}" for i in range(1, 9)]  # small pool => reuse accumulates
 _METHODS = ["card", "card", "card", "upi", "upi", "netbanking", "wallet"]

@@ -107,3 +107,24 @@ describe('LiveOperations', () => {
     expect(within(dialog).getByRole('link', { name: /audit ledger/ })).toHaveAttribute('href', '/ledger?id=aud_t_evt_3');
   });
 });
+
+describe('ML second opinion in the drawer', () => {
+  it('shows the score, the escalation and TreeSHAP reasons', () => {
+    EVENTS.unshift({
+      seq: 9, ts: Date.now() - 100, tenant_id: 'tenant_123', source: 'generator', scenario: 'velocity_burst', outcome: 'DECIDED',
+      decision: 'REVIEW', risk_score: 30, risk_level: 'MEDIUM', risk_factors: ['high_velocity'], amount: 900, ai_provider: 'UNAVAILABLE',
+      audit_id: 'aud_t_evt_9', latency_ms: 2, pii_masked: ['UPI_ID'],
+      ml: { model: 'lightgbm', probability: 0.97, escalated: true, escalation_threshold: 0.8,
+        reasons: [{ feature: 'recent payment velocity', direction: 'raises', contribution: 4.7, value: 11 }] },
+    });
+    render(<MemoryRouter><LiveOperations /></MemoryRouter>);
+    fireEvent.click(screen.getAllByTestId('live-row')[0]);
+    const dialog = screen.getByRole('dialog', { name: 'Event details' });
+    expect(within(dialog).getByText('score 0.97')).toBeInTheDocument();
+    expect(within(dialog).getByText(/sent an otherwise allowed payment to review/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/recent payment velocity/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/masked in the payment note/)).toBeInTheDocument();
+    expect(within(dialog).getByTestId('stage-ml')).toHaveAttribute('data-status', 'passed');
+    EVENTS.shift();
+  });
+});

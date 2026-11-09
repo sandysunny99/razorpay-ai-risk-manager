@@ -16,6 +16,7 @@ export function pipelineFor(event: LiveEvent): Record<StageId, StageStatus> {
   }
   const st = allPassed();
   if (!event.ai_provider || event.ai_provider === 'UNAVAILABLE') st.ai = 'fallback';
+  if (!event.ml) st.ml = 'fallback';
   return st;
 }
 
@@ -78,6 +79,34 @@ export default function EventDrawer({ event, onClose }: { event: LiveEvent | nul
               <p className="mt-1 text-ink">{event.zombie.impact}</p>
               <p className="mt-1 font-mono text-xs text-ink-muted">{event.zombie.recommendation}</p>
             </div>
+          )}
+
+          {event.ml && (
+            <section>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-sm font-semibold text-ink">ML second opinion</h3>
+                <span className="font-mono text-sm text-ink">score {event.ml.probability.toFixed(2)}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-ink-subtle">
+                {event.ml.escalated
+                  ? `Above ${event.ml.escalation_threshold ?? 0.8}, so the policy sent an otherwise allowed payment to review.`
+                  : 'Advisory. The model can only send an allowed payment to review; it never blocks.'}
+              </p>
+              <ul className="mt-2 space-y-1 text-sm">
+                {event.ml.reasons.map((r) => (
+                  <li key={r.feature} className="flex justify-between gap-3">
+                    <span className="text-ink">{r.feature} <span className={r.direction === 'raises' ? 'text-block' : 'text-allow'}>{r.direction} risk</span></span>
+                    <span className="font-mono text-xs text-ink-muted">{r.contribution > 0 ? '+' : ''}{r.contribution.toFixed(2)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {event.pii_masked && event.pii_masked.length > 0 && (
+            <p className="text-xs text-ink-muted">
+              Personal data masked in the payment note before analysis: {event.pii_masked.join(', ').toLowerCase().replace(/_/g, ' ')}.
+            </p>
           )}
 
           {event.threat && event.threat.length > 0 && (

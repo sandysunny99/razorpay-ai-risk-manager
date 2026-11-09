@@ -4,6 +4,7 @@ import {
   AuditRecord,
   AuditRecordResponse,
   AuditStats,
+  ComponentsStatus,
   ExposureSummary,
   GatewayStatus,
   GeneratorStatus,
@@ -152,3 +153,5 @@ export const getIntelMatches = async (limit = 50): Promise<{ items: IntelMatchLo
 
 export const refreshIntelFeeds = async (): Promise<IntelStatus & { results: Record<string, number> }> =>
   (await api.post('/intel/refresh')).data;
+
+export const getComponents = async (): Promise<ComponentsStatus> => (await api.get('/health/components')).data;

@@ -19,6 +19,7 @@ export function signalText(e: LiveEvent): { text: string; tone: string } | null 
   if (e.outcome === 'REJECTED') return { text: STAGE_LABELS[e.rejected_stage ?? 'unknown'] ?? 'Ingress', tone: 'text-block' };
   if (e.threat?.some((m) => m.category === 'card_exposed')) return { text: 'Card exposed', tone: 'text-zombie' };
   if (e.zombie) return { text: `Zombie: ${e.zombie.recommendation.replace(/_/g, ' ').toLowerCase()}`, tone: 'text-zombie' };
+  if (e.ml?.escalated) return { text: `Model: ${e.ml.reasons[0]?.feature ?? 'high score'}`, tone: 'text-review' };
   if (e.threat?.length) return { text: `Intel: ${e.threat[0].category.replace(/_/g, ' ')}`, tone: 'text-review' };
   if (e.risk_factors?.length) return { text: e.risk_factors.join(', ').replace(/_/g, ' '), tone: 'text-ink-muted' };
   return null;

@@ -4,6 +4,7 @@ import { GatewayStatus, ProviderHealth } from '../types/api';
 import { useLive } from '../hooks/LiveContext';
 import { getSafeApiError } from '../utils/errors';
 import { TrafficSettings } from '../components/TrafficControls';
+import ComponentsPanel from '../components/ComponentsPanel';
 import { formatTime, Notice, PageHeader, Panel, PanelHeader, Spinner, Tag } from '../components/ui';
 
 function providerTone(status: string) {
@@ -132,6 +133,8 @@ export default function SystemHealth() {
           <TrafficSettings status={generator} onChange={setGenerator} />
         </div>
       </Panel>
+
+      <ComponentsPanel />
 
       {error ? (
         <div data-testid="error-message">
