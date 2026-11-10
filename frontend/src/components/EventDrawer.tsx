@@ -15,7 +15,7 @@ export function pipelineFor(event: LiveEvent): Record<StageId, StageStatus> {
     return failedAt(INGRESS.find((s) => s === event.rejected_stage) ?? 'schema');
   }
   const st = allPassed();
-  if (!event.ai_provider || event.ai_provider === 'UNAVAILABLE') st.ai = 'fallback';
+  if (!event.ai_provider || event.ai_provider === 'UNAVAILABLE') st.ai = event.ai?.status === 'SKIPPED' ? 'skipped' : 'fallback';
   if (!event.ml) st.ml = 'fallback';
   return st;
 }
@@ -100,6 +100,31 @@ export default function EventDrawer({ event, onClose }: { event: LiveEvent | nul
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {event.ai && (event.ai.explanation || event.ai.status === 'SKIPPED') && (
+            <section>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-sm font-semibold text-ink">AI analyst note</h3>
+                <span className="text-xs text-ink-subtle">{event.ai_provider !== 'UNAVAILABLE' ? event.ai_provider : ''}</span>
+              </div>
+              {event.ai.explanation ? (
+                <>
+                  <p className="mt-1 text-sm text-ink">{event.ai.explanation}</p>
+                  <p className="mt-1 text-xs text-ink-subtle">
+                    Suggested {event.ai.recommended_action?.toLowerCase().replace(/_/g, ' ')}. Advisory only: the policy engine made the decision.
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-xs text-ink-subtle">
+                  {event.ai.reason === 'NOT_FLAGGED'
+                    ? 'Not requested: this payment was plainly safe, so no AI call was spent on it.'
+                    : event.ai.reason === 'BUDGET_EXCEEDED'
+                      ? 'Not requested: the per-minute AI budget was used up. The decision is unaffected.'
+                      : 'Not requested.'}
+                </p>
+              )}
             </section>
           )}
 

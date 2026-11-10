@@ -6,6 +6,9 @@ import sys
 os.environ.setdefault("NETVRIO_ENV", "test")
 # Hundreds of requests come from one TestClient address; individual tests lower this to check 429s.
 os.environ.setdefault("NETVRIO_RATE_LIMIT", "100000/minute")
+# LLM gate tests patch the router; run the advisory step for every payment, with no budget cap.
+os.environ.setdefault("NETVRIO_LLM_SCOPE", "all")
+os.environ.setdefault("NETVRIO_LLM_MAX_PER_MIN", "100000")
 
 # Ensure backend directory is in python path for all tests
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

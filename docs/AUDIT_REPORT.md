@@ -36,6 +36,15 @@ before each logic fix. Every item below has a regression test unless marked othe
 | 21 | Abuse | Public ingest endpoints had no rate limit. | Cheap flooding of signature checks and the audit ledger. | SlowAPI per-client limit (`NETVRIO_RATE_LIMIT`, default 300/min) on webhook, Razorpay, YouPI and exposure endpoints. | `test_ingest_endpoints_are_rate_limited`. |
 | 22 | Testing | `test_telemetry_span_export_leakage` failed intermittently: a random event id could contain "999", the CVV it checks for. | Flaky gate. | Random part excludes the digit 9. | Suite stable. |
 
+### Third round (AI providers and live keys)
+
+| # | Area | Finding | Impact | Fix | Evidence |
+|---|---|---|---|---|---|
+| 23 | AI router | Providers report failure by **returning** a MISCONFIGURED/TIMEOUT/ERROR response, but the router treated any returned response as success, so **fallback never happened**. An existing test asserted this behaviour. | One unconfigured or rate-limited provider disabled AI for every payment. | Only SUCCESS ends the chain; on total failure the last failure is returned for the audit trail. | `test_router_falls_back_past_returned_failures`. |
+| 24 | AI providers | Hard-coded models had been retired (Groq `llama-3.1-8b-instant`, NVIDIA `meta/llama-3.1-8b-instruct` EOL 2026-08-26, Gemini `gemini-2.5-flash` closed to new users) and the Hugging Face `api-inference` endpoint is gone; errors surfaced as "Unexpected HTTP error". | AI silently unavailable. | Current defaults (auto-updating aliases where offered), `*_MODEL` overrides, 404/410 reported as "model unavailable", Hugging Face router. Verified live: Groq, Cloudflare, Gemini answering. | `POST /health/providers/verify`. |
+| 25 | AI providers | Cloudflare Workers AI now answers in the OpenAI shape and sometimes returns the JSON as an object; Cloudflare also used an older prompt that let confidence come back as 0.8. | Every Cloudflare answer rejected. | Shared prompt and tolerant parser for all providers; 0-1 confidence converted to a percentage, schema still strict. | `test_cloudflare_accepts_openai_shape_with_object_content`. |
+| 26 | Cost / latency | The advisory LLM was called synchronously for **every** payment (about 120 calls a minute at demo load, above Groq's free limit, and each payment waited on it). | Rate-limit failures, cost, latency. | AI notes only for payments that are not plainly safe, plus a per-minute budget; the decision never waits on or depends on it. | `test_flagged_scope_skips_plainly_safe_payments`, `test_budget_caps_calls_per_minute`. |
+
 ## New capabilities (security reviewed)
 
 - **Threat intelligence** (`backend/threat_intel/`): local indicator store, so no per-payment calls and no customer data sent to third parties. Feeds (Tor exit list, Spamhaus DROP) are opt-in, HTTPS-only, size-capped and strictly parsed (non-global and over-broad ranges dropped), and fail static on errors. Matches are evidence only.
@@ -50,11 +59,11 @@ before each logic fix. Every item below has a regression test unless marked othe
 
 | Gate | Result |
 |---|---|
-| Backend tests | 329 passed, 1 skipped (live Razorpay order test needs real keys) |
+| Backend tests | 369 passed, 1 skipped (live Razorpay order test needs real keys) |
 | Coverage gate (`backend/app`, ≥ 75%) | 81% |
 | Ruff (`backend/ scripts/`) | clean |
 | Release guard, frozen test-set hash | pass |
-| Frontend | `tsc` strict, 23 Vitest tests, production build |
+| Frontend | `tsc` strict, 24 Vitest tests, production build |
 | pip-audit / Bandit | no known vulnerabilities / 0 medium+ findings |
 | Smoke test against running API | 8/8 |
 | Live browser | stream, review approve, exposure drill (40 fingerprints, linked tokens revoked and blocked), YouPI webhook + duplicate, command palette, 375px layout |

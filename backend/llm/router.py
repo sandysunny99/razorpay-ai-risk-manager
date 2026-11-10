@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import time
 from typing import List, Optional, Tuple
 
@@ -26,6 +26,7 @@ class RiskLLMRouter:
         }
 
         start_time = time.time()
+        last_failure: Optional[RiskLLMResponse] = None
 
         # Test 1: Check sensitive data before any external call
         try:
@@ -43,7 +44,14 @@ class RiskLLMRouter:
 
                 response = provider.analyze(request)
 
-                # We have a response, ensure it validates against our schema (done implicitly by Pydantic model response in provider, but double check)
+                # Providers report failure by returning a non-SUCCESS status (MISCONFIGURED, TIMEOUT,
+                # rate limit...). Those must fall through to the next provider, not end the chain.
+                status = getattr(response, "status", "SUCCESS")
+                if status != "SUCCESS":
+                    last_failure = response
+                    audit_metadata["failure_reason"] = f"{provider.provider_name}: {status}"
+                    continue
+
                 audit_metadata["provider"] = provider.provider_name
                 audit_metadata["status"] = "SUCCESS"
                 audit_metadata["latency"] = time.time() - start_time
@@ -74,5 +82,6 @@ class RiskLLMRouter:
                 continue
 
         audit_metadata["latency"] = time.time() - start_time
-        # Safe fallback: no provider succeeded.
-        return None, audit_metadata
+        # Safe fallback: no provider succeeded. Return the last structured failure (if any) so the
+        # caller can see why; it carries no recommendation and never affects the decision.
+        return last_failure, audit_metadata

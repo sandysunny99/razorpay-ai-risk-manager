@@ -5,14 +5,8 @@ import { useLive } from '../hooks/LiveContext';
 import { getSafeApiError } from '../utils/errors';
 import { TrafficSettings } from '../components/TrafficControls';
 import ComponentsPanel from '../components/ComponentsPanel';
+import AiProvidersPanel from '../components/AiProvidersPanel';
 import { formatTime, Notice, PageHeader, Panel, PanelHeader, Spinner, Tag } from '../components/ui';
-
-function providerTone(status: string) {
-  if (status === 'HEALTHY') return 'allow' as const;
-  if (status === 'UNAVAILABLE' || status === 'MISCONFIGURED') return 'block' as const;
-  if (status.startsWith('NOT VERIFIED') || status === 'DEGRADED') return 'review' as const;
-  return 'neutral' as const;
-}
 
 function Row({ name, role, status, tone }: { name: string; role: string; status: string; tone: 'allow' | 'review' | 'block' | 'neutral' }) {
   return (
@@ -100,20 +94,7 @@ export default function SystemHealth() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <GatewayPanel
-          title="Razorpay (test mode)"
-          subtitle="Card and UPI payments. Verified with X-Razorpay-Signature."
-          load={loadRazorpay}
-          footnote="Card details, e-mail and phone are dropped at the adapter; customers are pseudonymised before analysis."
-          setup={(s, origin) => (
-            <ol className="list-decimal space-y-1 pl-5 text-ink-muted">
-              <li>Set <code className="font-mono text-ink">RAZORPAY_WEBHOOK_SECRET</code> on the API (tenant <code className="font-mono">{s.tenant_id}</code>).</li>
-              <li>Razorpay Dashboard, Test Mode, Settings, Webhooks: add <code className="break-all font-mono text-ink">{origin}{s.webhook_path}</code></li>
-              <li>Subscribe to <span className="font-mono text-xs">{s.supported_events.join(', ')}</span> and make a test payment.</li>
-            </ol>
-          )}
-        />
-        <GatewayPanel
-          title="YouPI-PG (UPI, experimental)"
+          title="YouPI-PG (UPI, primary source)"
           subtitle="Self-hosted UPI gateway. Verified with X-Gateway-Signature and the timestamp-bound V2 signature."
           load={getYoupiStatus}
           footnote="YouPI marks bank-alert payments as OBSERVED_SUCCESS. They are shown as unreconciled: only RECONCILED events are settlement proof. The project is not NPCI or bank approved."
@@ -122,6 +103,19 @@ export default function SystemHealth() {
               <li>Set <code className="font-mono text-ink">YOUPI_WEBHOOK_SECRET</code> (and <code className="font-mono">YOUPI_REQUIRE_V2=true</code> to insist on V2).</li>
               <li>Point the YouPI merchant webhook at <code className="break-all font-mono text-ink">{origin}{s.webhook_path}</code></li>
               <li>Retries reuse the delivery ID and are acknowledged as duplicates, not reprocessed.</li>
+            </ol>
+          )}
+        />
+        <GatewayPanel
+          title="Razorpay (test mode, optional)"
+          subtitle="Card and UPI payments. Verified with X-Razorpay-Signature."
+          load={loadRazorpay}
+          footnote="Card details, e-mail and phone are dropped at the adapter; customers are pseudonymised before analysis."
+          setup={(s, origin) => (
+            <ol className="list-decimal space-y-1 pl-5 text-ink-muted">
+              <li>Set <code className="font-mono text-ink">RAZORPAY_WEBHOOK_SECRET</code> on the API (tenant <code className="font-mono">{s.tenant_id}</code>).</li>
+              <li>Razorpay Dashboard, Test Mode, Settings, Webhooks: add <code className="break-all font-mono text-ink">{origin}{s.webhook_path}</code></li>
+              <li>Subscribe to <span className="font-mono text-xs">{s.supported_events.join(', ')}</span> and make a test payment.</li>
             </ol>
           )}
         />
@@ -142,14 +136,7 @@ export default function SystemHealth() {
         </div>
       ) : health ? (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <Panel>
-            <PanelHeader title="AI advisory providers" subtitle="Fallback chain. Advisory only, never the deciding voice." />
-            <ul className="divide-y divide-line">
-              <Row name="Cloudflare / Primary" role="Workers AI" status={health.primary} tone={providerTone(health.primary)} />
-              <Row name="Grok / Secondary" role="xAI" status={health.secondary} tone={providerTone(health.secondary)} />
-              <Row name="Hugging Face / Fallback" role="Inference API" status={health.fallback} tone={providerTone(health.fallback)} />
-            </ul>
-          </Panel>
+          <AiProvidersPanel health={health} onChange={setHealth} />
           <Panel>
             <PanelHeader title="Platform" subtitle="Status measured from this browser session" />
             <ul className="divide-y divide-line">

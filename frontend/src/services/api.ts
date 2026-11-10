@@ -99,6 +99,8 @@ export const getHealth = async (): Promise<SystemHealth> => (await api.get('/hea
 
 export const getProviderHealth = async (): Promise<ProviderHealth> => (await api.get('/health/providers')).data;
 
+export const verifyProviders = async (): Promise<ProviderHealth> => (await api.post('/health/providers/verify', {}, { timeout: 120000 })).data;
+
 export const getAudit = async (auditId: string): Promise<AuditRecord> =>
   (await api.get(`/audit/${encodeURIComponent(auditId)}`)).data;
 

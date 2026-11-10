@@ -15,8 +15,9 @@ from backend.api.models import WebhookPayload
 from backend.api.ratelimit import ingest_limit, limiter
 from backend.audit.audit_log import SqlAuditRepository
 from backend.evidence.builder import EvidenceBuilder
+from backend.llm.chain import budget as llm_budget
+from backend.llm.chain import build_active, scope_all
 from backend.llm.policy import validate_llm_advisory
-from backend.llm.providers import CloudflareProvider, GrokProvider, HuggingFaceProvider
 from backend.llm.router import RiskLLMRouter
 from backend.llm.schemas import RiskLLMRequest
 from backend.ml.features import from_live_event
@@ -42,10 +43,14 @@ from backend.threat_intel.store import ThreatMatch
 
 router = APIRouter()
 
+
+class _SkipLLM(Exception):
+    """Internal control flow: the advisory call is intentionally skipped."""
+
 risk_engine = DeterministicRiskEngine()
 zombie_saver = ZombieCardSaver(allow_raw_reference=False)
 evidence_builder = EvidenceBuilder()
-llm_router = RiskLLMRouter(providers=[CloudflareProvider(), GrokProvider(), HuggingFaceProvider()])
+llm_router = RiskLLMRouter(providers=build_active())
 policy_engine = PolicyEngine()
 db_url = os.environ.get("AUDIT_DB_URL", "sqlite:///netvrio_audit.db")
 audit_repo = SqlAuditRepository(db_url)
@@ -277,7 +282,23 @@ def run_pipeline(
 
                 llm_response = None
                 audit_metadata = {}
+                # Advisory only, so spend calls where an analyst may look: anything not plainly safe.
+                flagged = (
+                    str(getattr(risk_assessment.risk_level, "value", risk_assessment.risk_level)) != "LOW"
+                    or bool(zombie_assessment.signals)
+                    or bool(ti_matches)
+                    or bool(ml_assessment and ml_assessment["probability"] >= 0.5)
+                )
+                skip_reason = None
+                if not (scope_all() or flagged):
+                    skip_reason = "NOT_FLAGGED"
+                elif not llm_budget.take():
+                    skip_reason = "BUDGET_EXCEEDED"
+                if skip_reason:
+                    audit_metadata = {"provider": None, "status": "SKIPPED", "failure_reason": skip_reason}
                 try:
+                    if skip_reason:
+                        raise _SkipLLM()
                     llm_req = RiskLLMRequest.from_risk_context(
                         event_id=event_id,
                         merchant_id=merchant_id,
@@ -287,9 +308,9 @@ def run_pipeline(
                     )
                     llm_response, audit_metadata = llm_router.analyze(llm_req)
 
-                    llm_span.set_attribute("provider", audit_metadata.get("provider", "UNAVAILABLE"))
+                    llm_span.set_attribute("provider", audit_metadata.get("provider") or "UNAVAILABLE")
                     llm_span.set_attribute("llm_status", audit_metadata.get("status", "FAILED"))
-                    llm_span.set_attribute("failure_reason", audit_metadata.get("failure_reason", ""))
+                    llm_span.set_attribute("failure_reason", audit_metadata.get("failure_reason") or "")
                     llm_span.set_attribute("latency", audit_metadata.get("latency", 0.0))
 
                     # Validate evidence citing and prompt injections
@@ -298,6 +319,8 @@ def run_pipeline(
                         if not llm_response:
                             llm_span.set_attribute("evidence_validation_failure", True)
 
+                except _SkipLLM:
+                    llm_span.set_attribute("llm_status", "SKIPPED")
                 except Exception as e:
                     llm_span.set_attribute("provider_state", "UNAVAILABLE")
                     llm_span.set_attribute("failure_reason", f"EXCEPTION: {type(e).__name__}")
@@ -378,7 +401,10 @@ def run_pipeline(
                     "recommendation": getattr(zombie_assessment, 'recommendation', None)
                 } if len(getattr(zombie_assessment, 'signals', [])) > 0 else None,
                 "ai_advisory": {
-                    "provider": audit_metadata.get("provider", "UNAVAILABLE") if audit_metadata else "UNAVAILABLE",
+                    "provider": (audit_metadata or {}).get("provider") or "UNAVAILABLE",
+                    "status": (audit_metadata or {}).get("status") or "FAILED",
+                    "reason": (audit_metadata or {}).get("failure_reason"),
+                    "explanation": (getattr(llm_response, "explanation", None) or "")[:500] if llm_response else None,
                     "recommended_action": getattr(llm_response, 'recommended_action', 'UNAVAILABLE') if llm_response else 'UNAVAILABLE',
                     "evidence_ids": getattr(llm_response, 'cited_evidence_ids', []) if llm_response else []
                 }
@@ -397,6 +423,7 @@ def _event_summary(result: dict, payload_meta: dict) -> dict:
         "risk_factors": [f.get("name") for f in risk.get("risk_factors", [])],
         "zombie": result.get("zombie_signal"),
         "ai_provider": (result.get("ai_advisory") or {}).get("provider", "UNAVAILABLE"),
+        "ai": {k: (result.get("ai_advisory") or {}).get(k) for k in ("status", "reason", "recommended_action", "explanation")},
         "threat": result.get("threat_intel") or [],
         "ml": result.get("ml_assessment"),
         "pii_masked": result.get("pii_masked") or [],

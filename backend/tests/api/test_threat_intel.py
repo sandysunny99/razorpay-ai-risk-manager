@@ -107,14 +107,14 @@ def test_refresh_is_fail_static(monkeypatch):
     good = {"https://check.torproject.org/torbulkexitlist": "185.220.101.1\n185.220.101.2\n",
             "https://www.spamhaus.org/drop/drop_v4.json": '{"cidr":"45.95.0.0/16"}\n'}
     res = feeds.refresh_live_feeds(svc.store, fetcher=lambda url: good[url])
-    assert res == {"tor-exit-nodes": 2, "spamhaus-drop": 1}
+    assert res["tor-exit-nodes"] == 2 and res["spamhaus-drop"] == 1
     assert svc.assess("t", "e1", "45.95.3.3", None)[0].category == "hijacked_netblock"
 
     def broken(url):
         raise TimeoutError("feed down")
 
     res = feeds.refresh_live_feeds(svc.store, fetcher=broken)
-    assert res == {"tor-exit-nodes": -1, "spamhaus-drop": -1}
+    assert res["tor-exit-nodes"] == -1 and res["spamhaus-drop"] == -1
     # Previous indicators survive a failed refresh and the error is reported.
     assert svc.assess("t", "e2", "185.220.101.2", None)[0].source == "tor-exit-nodes"
     tor = next(s for s in svc.store.sources() if s["name"] == "tor-exit-nodes")

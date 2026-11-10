@@ -85,7 +85,7 @@ FINGERPRINT_HMAC_SECRET=<hex> EXPOSURE_FEED_SECRET=<secret> python scripts/onion
 
 Card numbers never leave the adapter. To rehearse against a running demo API: `python scripts/demo_exposure_drill.py` (same two secrets).
 
-### Connect YouPI-PG (UPI)
+### Connect YouPI-PG (UPI): the primary payment source
 Set `YOUPI_WEBHOOK_SECRET` (optionally `YOUPI_REQUIRE_V2=true`, `YOUPI_TENANT_ID`) and point the YouPI merchant webhook at `/integrations/youpi/webhook`.
 
 ### Configuration
@@ -99,6 +99,8 @@ Set `YOUPI_WEBHOOK_SECRET` (optionally `YOUPI_REQUIRE_V2=true`, `YOUPI_TENANT_ID
 | `RAZORPAY_WEBHOOK_SECRET` / `RAZORPAY_TENANT_ID` | Razorpay adapter. |
 | `YOUPI_WEBHOOK_SECRET` / `YOUPI_REQUIRE_V2` / `YOUPI_TENANT_ID` | YouPI-PG adapter. |
 | `EXPOSURE_FEED_SECRET` / `FINGERPRINT_HMAC_SECRET` | Card exposure ingestion and the shared card-fingerprint key. |
+| `NETVRIO_LLM_CHAIN` / `NETVRIO_LLM_SCOPE` / `NETVRIO_LLM_MAX_PER_MIN` | AI provider order (Groq, Cloudflare, Gemini, NVIDIA, Hugging Face, Grok), which payments get an AI note (`flagged` or `all`) and the per-minute call budget. Keys: `GROQ_API_KEY`, `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `HF_API_KEY`/`HF_TOKEN`, `GROK_API_KEY`. |
+| `ABUSE_CH_AUTH_KEY` / `OTX_API_KEY` | abuse.ch ThreatFox and AlienVault OTX feeds (Feodo Tracker, Spamhaus DROP and Tor need no key). |
 | `NETVRIO_ML_ESCALATE` / `NETVRIO_ML_THRESHOLD` | Let the model send ALLOW decisions to review (off by default; on in Docker demo) and the score threshold (0.8). |
 | `NETVRIO_PII_ENGINE` | `auto` (Presidio if installed), `presidio` or `regex`. |
 | `NETVRIO_RATE_LIMIT` / `RATE_LIMIT_STORAGE_URI` | Ingest rate limit per client (default `300/minute`) and its storage (`memory://` or `redis://...`). |
@@ -132,9 +134,9 @@ python -m pytest backend/tests -q
 cd frontend && npx vitest run
 ```
 
-* **Backend:** 329 passed / 1 skipped (live Razorpay order test needs real keys); coverage gate 81%
+* **Backend:** 369 passed / 1 skipped (live Razorpay order test needs real keys); coverage gate 81%
 * **Supply chain:** pip-audit no known vulnerabilities; Bandit 0 medium+ findings
-* **Frontend:** 23 passed; `tsc` strict + production build pass
+* **Frontend:** 24 passed; `tsc` strict + production build pass
 * **Smoke test:** `python scripts/demo_smoke_test.py` against a running API — 8/8
 
 ## Limitations

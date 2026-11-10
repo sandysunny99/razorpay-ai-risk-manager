@@ -13,10 +13,23 @@ export interface SystemHealth {
   service: string;
 }
 
+export interface ProviderChainRow {
+  name: string;
+  configured: boolean;
+  model: string | null;
+  status: string;
+  latency_ms: number | null;
+  detail: string | null;
+  checked_at: number | null;
+}
+
 export interface ProviderHealth {
   primary: ProviderStatus;
   secondary: ProviderStatus;
   fallback: ProviderStatus;
+  chain?: ProviderChainRow[];
+  scope?: 'flagged' | 'all';
+  budget?: { used_last_minute: number; limit_per_minute: number };
 }
 
 /** Mirrors backend/risk/models.py::RiskFactor */
@@ -121,6 +134,7 @@ export interface LiveEvent {
   audit_id?: string;
   threat?: ThreatMatch[];
   ml?: MlAssessment | null;
+  ai?: { status: string | null; reason: string | null; recommended_action: string | null; explanation: string | null } | null;
   pii_masked?: string[];
   // RESOLVED (analyst outcome for a REVIEW decision)
   resolves?: string;

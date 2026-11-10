@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 
 import httpx
@@ -13,7 +13,7 @@ class HuggingFaceProvider(RiskLLMProvider):
     provider_name = "huggingface"
 
     def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.getenv("HF_API_KEY")
+        self.api_key = api_key or os.getenv("HF_API_KEY") or os.getenv("HF_TOKEN")
         self.model = os.getenv("HF_MODEL", "meta-llama/Llama-2-7b-chat-hf")
 
     def _get_url(self) -> str:

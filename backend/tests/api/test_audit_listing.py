@@ -135,3 +135,30 @@ def test_review_resolution_is_audited_once_and_tenant_scoped():
     listed = client.get("/audit", headers={"x-tenant-id": tenant}).json()["items"]
     assert len(listed) == 2  # resolution records are not listed as decisions
     assert client.get("/audit/summary", headers={"x-tenant-id": tenant}).json()["total"] == 2
+
+
+def test_concurrent_writers_in_separate_repositories_never_fork_the_chain(tmp_path):
+    """Regression: the lock was per-process, so two writers (workers, or a server and a test run
+    sharing a file) could append after the same tail and fork the chain."""
+    import threading as _threading
+
+    from backend.audit.audit_log import SqlAuditRepository
+
+    url = f"sqlite:///{tmp_path / 'shared_audit.db'}"
+    repo_a, repo_b = SqlAuditRepository(url), SqlAuditRepository(url)  # independent locks, like two processes
+    assert repo_a.fork_guard and repo_b.fork_guard
+
+    def write(repo, prefix):
+        for i in range(40):
+            repo.append_record({"audit_id": f"{prefix}{i}", "event_id": "e", "merchant_id": "m",
+                                "correlation_id": "c", "timestamp": i, "decision": "ALLOW"})
+
+    threads = [_threading.Thread(target=write, args=(repo_a, "a")), _threading.Thread(target=write, args=(repo_b, "b"))]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert repo_a.verify_chain() is True
+    with repo_a.Session() as s:
+        from backend.audit.audit_log import AuditRecordModel
+        assert s.query(AuditRecordModel).count() == 80
